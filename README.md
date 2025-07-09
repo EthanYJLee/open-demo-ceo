@@ -11,8 +11,8 @@
 
 ## 기술 스택
 
-- React 19
-- TypeScript
+- React 18
+- JavaScript
 - Tailwind CSS
 - React Konva (Konva.js)
 - Supabase
@@ -103,7 +103,3 @@ npm run build
 
 - `npm install`로 의존성 재설치
 - node_modules 삭제 후 재설치
-
-## 라이선스
-
-MIT License
