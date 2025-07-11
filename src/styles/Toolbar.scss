@@ -1,0 +1,331 @@
+.toolbar {
+  padding: 16px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+  border-right: 1px solid #e2e8f0;
+  height: 100%;
+  overflow-y: auto;
+  
+  &::-webkit-scrollbar {
+    width: 4px;
+  }
+  
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  
+  &::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 2px;
+  }
+  
+  &::-webkit-scrollbar-thumb:hover {
+    background: #94a3b8;
+  }
+}
+
+.toolbar__header {
+  text-align: center;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.toolbar__title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #1e293b;
+  margin: 0 0 4px 0;
+  letter-spacing: 0.025em;
+}
+
+.toolbar__subtitle {
+  font-size: 11px;
+  color: #64748b;
+  margin: 0;
+  font-weight: 500;
+}
+
+.toolbar__tools {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.toolbar__button {
+  width: 100%;
+  height: auto;
+  min-height: 48px;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 10px;
+  background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 12px 10px;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+  
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(135deg, rgba(59, 130, 246, 0.05) 0%, rgba(147, 51, 234, 0.05) 100%);
+    opacity: 0;
+    transition: opacity 0.2s ease;
+  }
+  
+  &:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow: 
+      0 4px 6px -1px rgba(0, 0, 0, 0.1),
+      0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    border-color: #3b82f6;
+    
+    &::before {
+      opacity: 1;
+    }
+    
+    .toolbar__icon {
+      transform: scale(1.1);
+      color: #3b82f6;
+    }
+    
+    .toolbar__label {
+      color: #3b82f6;
+    }
+  }
+  
+  &:active:not(:disabled) {
+    transform: translateY(0);
+    box-shadow: 
+      0 2px 4px -1px rgba(0, 0, 0, 0.1),
+      0 1px 2px -1px rgba(0, 0, 0, 0.06);
+  }
+  
+  &:disabled {
+    background: #f1f5f9;
+    border-color: #e2e8f0;
+    cursor: not-allowed;
+    opacity: 0.6;
+  }
+}
+
+.toolbar__icon {
+  font-size: 1.25rem;
+  line-height: 1;
+  color: #64748b;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+}
+
+.toolbar__label {
+  font-size: 12px;
+  font-weight: 500;
+  color: #64748b;
+  text-align: left;
+  transition: color 0.2s ease;
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.toolbar__divider {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 0;
+}
+
+.toolbar__divider-line {
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(90deg, transparent 0%, #e2e8f0 50%, transparent 100%);
+}
+
+.toolbar__divider-text {
+  font-size: 10px;
+  font-weight: 600;
+  color: #94a3b8;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  white-space: nowrap;
+}
+
+.toolbar__actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.toolbar__button--delete {
+  color: #dc2626;
+  background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
+  border-color: #fecaca;
+  
+  &:hover:not(:disabled) {
+    background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
+    border-color: #fca5a5;
+    box-shadow: 
+      0 4px 6px -1px rgba(220, 38, 38, 0.1),
+      0 2px 4px -1px rgba(220, 38, 38, 0.06);
+    
+    .toolbar__icon {
+      color: #dc2626;
+    }
+    
+    .toolbar__label {
+      color: #dc2626;
+    }
+  }
+}
+
+.toolbar__button--delete.toolbar__button--active {
+  background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
+  border-color: #fca5a5;
+  
+  .toolbar__icon {
+    color: #dc2626;
+  }
+  
+  .toolbar__label {
+    color: #dc2626;
+  }
+}
+
+.toolbar__button--delete.toolbar__button--disabled {
+  color: #d1d5db;
+  background: #f3f4f6;
+  border-color: #e5e7eb;
+  
+  .toolbar__icon {
+    color: #d1d5db;
+  }
+  
+  .toolbar__label {
+    color: #d1d5db;
+  }
+}
+
+.toolbar__icon--delete {
+  color: #dc2626;
+}
+
+.toolbar__footer {
+  margin-top: auto;
+  padding-top: 16px;
+  border-top: 1px solid #e2e8f0;
+}
+
+.toolbar__tip {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 12px;
+  background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+  border: 1px solid #bfdbfe;
+  border-radius: 8px;
+  font-size: 11px;
+  color: #1e40af;
+  line-height: 1.4;
+  
+  svg {
+    flex-shrink: 0;
+    margin-top: 1px;
+  }
+}
+
+// 반응형 디자인
+@media (max-width: 768px) {
+  .toolbar {
+    padding: 12px 8px;
+    gap: 12px;
+  }
+  
+  .toolbar__button {
+    min-height: 44px;
+    padding: 10px 8px;
+    gap: 8px;
+  }
+  
+  .toolbar__label {
+    font-size: 11px;
+  }
+  
+  .toolbar__icon {
+    width: 18px;
+    height: 18px;
+  }
+}
+
+// 다크 모드 지원 (선택적)
+@media (prefers-color-scheme: dark) {
+  .toolbar {
+    background: linear-gradient(180deg, #1e293b 0%, #334155 100%);
+    border-right-color: #475569;
+  }
+  
+  .toolbar__header {
+    border-bottom-color: #475569;
+  }
+  
+  .toolbar__title {
+    color: #f1f5f9;
+  }
+  
+  .toolbar__subtitle {
+    color: #94a3b8;
+  }
+  
+  .toolbar__button {
+    background: linear-gradient(135deg, #334155 0%, #475569 100%);
+    border-color: #64748b;
+    
+    &:hover:not(:disabled) {
+      border-color: #3b82f6;
+      box-shadow: 
+        0 4px 6px -1px rgba(59, 130, 246, 0.2),
+        0 2px 4px -1px rgba(59, 130, 246, 0.1);
+    }
+  }
+  
+  .toolbar__icon {
+    color: #94a3b8;
+  }
+  
+  .toolbar__label {
+    color: #94a3b8;
+  }
+  
+  .toolbar__divider-line {
+    background: linear-gradient(90deg, transparent 0%, #475569 50%, transparent 100%);
+  }
+  
+  .toolbar__divider-text {
+    color: #64748b;
+  }
+  
+  .toolbar__footer {
+    border-top-color: #475569;
+  }
+  
+  .toolbar__tip {
+    background: linear-gradient(135deg, #1e3a8a 0%, #1e40af 100%);
+    border-color: #3b82f6;
+    color: #dbeafe;
+  }
+} 

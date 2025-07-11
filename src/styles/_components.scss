@@ -1,0 +1,363 @@
+@import 'variables';
+@import 'mixins';
+
+// Buttons
+.btn {
+  @include button-base;
+  
+  &--primary {
+    @include button-primary;
+  }
+  
+  &--secondary {
+    @include button-secondary;
+  }
+  
+  &--danger {
+    @include button-danger;
+  }
+  
+  &--sm {
+    padding: $spacing-1 $spacing-2;
+    font-size: 0.75rem; // text-xs
+  }
+  
+  &--lg {
+    padding: $spacing-3 $spacing-6;
+    font-size: 1rem; // text-base
+  }
+  
+  &--full {
+    width: 100%;
+  }
+  
+  &--loading {
+    @include loading-spinner;
+  }
+}
+
+// Cards
+.card {
+  @include card-base;
+  
+  &--hover {
+    @include card-hover;
+  }
+  
+  &__header {
+    padding: $spacing-4 $spacing-6;
+    border-bottom: 1px solid $gray-200;
+  }
+  
+  &__title {
+    font-size: 1.125rem; // text-lg
+    font-weight: 600;
+    color: $gray-900;
+  }
+  
+  &__body {
+    padding: $spacing-6;
+  }
+  
+  &__footer {
+    padding: $spacing-4 $spacing-6;
+    border-top: 1px solid $gray-200;
+  }
+}
+
+// Forms
+.form {
+  width: 100%;
+  max-width: 28rem; // max-w-md
+  
+  &__header {
+    @include flex-between;
+    margin-bottom: $spacing-4;
+  }
+  
+  &__title {
+    font-size: 1.25rem; // text-xl
+    font-weight: 600;
+    color: $gray-900;
+  }
+  
+  &__close-button {
+    color: $gray-400;
+    background: none;
+    border: none;
+    font-size: 1.25rem; // text-xl
+    cursor: pointer;
+    
+    &:hover {
+      color: $gray-600;
+    }
+  }
+  
+  &__body {
+    @include flex-col;
+    gap: $spacing-4;
+  }
+  
+  &__group {
+    margin-bottom: $spacing-4;
+  }
+  
+  &__row {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: $spacing-4;
+  }
+  
+  &__label {
+    display: block;
+    font-size: 0.875rem; // text-sm
+    font-weight: 500;
+    color: $gray-700;
+    margin-bottom: $spacing-1;
+  }
+  
+  &__input {
+    @include input-base;
+  }
+  
+  &__textarea {
+    @include input-base;
+    resize: vertical;
+    min-height: 6rem; // 24 * 0.25rem
+  }
+  
+  &__select {
+    @include input-base;
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='m6 8 4 4 4-4'/%3e%3c/svg%3e");
+    background-position: right 0.5rem center;
+    background-repeat: no-repeat;
+    background-size: 1.5em 1.5em;
+    padding-right: 2.5rem;
+    appearance: none;
+  }
+  
+  &__checkbox {
+    display: flex;
+    align-items: center;
+    
+    input[type="checkbox"] {
+      width: 1rem; // w-4
+      height: 1rem; // h-4
+      color: $primary-600;
+      border-color: $gray-300;
+      border-radius: $border-radius-sm;
+      margin-right: $spacing-2;
+      
+      &:focus {
+        border-color: $primary-500;
+        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+      }
+    }
+    
+    label {
+      font-size: 0.875rem; // text-sm
+      color: $gray-900;
+    }
+  }
+  
+  &__actions {
+    @include flex-between;
+    padding-top: $spacing-4;
+    gap: $spacing-3;
+  }
+}
+
+// Modals
+.modal {
+  &__overlay {
+    @include modal-overlay;
+  }
+  
+  &__content {
+    @include modal-content;
+  }
+  
+  &__header {
+    @include flex-between;
+    margin-bottom: $spacing-4;
+    
+    &-title {
+      font-size: 1.25rem; // text-xl
+      font-weight: 600;
+      color: $gray-900;
+    }
+    
+    &-close {
+      color: $gray-400;
+      background: none;
+      border: none;
+      font-size: 1.5rem; // text-2xl
+      cursor: pointer;
+      padding: 0;
+      
+      &:hover {
+        color: $gray-600;
+      }
+    }
+  }
+  
+  &__body {
+    margin-bottom: $spacing-4;
+  }
+  
+  &__footer {
+    @include flex-between;
+    gap: $spacing-3;
+  }
+}
+
+// Loading states
+.loading {
+  @include flex-center;
+  height: 16rem; // h-64
+  
+  &__spinner {
+    @include loading-spinner;
+    width: 2rem; // w-8
+    height: 2rem; // h-8
+    border-width: 2px;
+    border-color: $primary-500;
+  }
+}
+
+// Error states
+.error {
+  @include flex-center;
+  height: 16rem; // h-64
+  
+  &__content {
+    text-align: center;
+  }
+  
+  &__icon {
+    font-size: 2rem; // text-2xl
+    color: $red-500;
+    margin-bottom: $spacing-4;
+  }
+  
+  &__message {
+    color: $gray-600;
+    margin-bottom: $spacing-4;
+  }
+}
+
+// Stats cards
+.stats {
+  &__card {
+    @include card-base;
+    padding: $spacing-6;
+    
+    &-header {
+      @include flex-start;
+      margin-bottom: $spacing-4;
+    }
+    
+    &-icon {
+      width: 3rem; // w-12
+      height: 3rem; // h-12
+      border-radius: $border-radius-lg;
+      @include flex-center;
+      margin-right: $spacing-4;
+      font-size: 1.5rem; // text-2xl
+      color: white;
+      
+      &--blue {
+        background-color: $blue-500;
+      }
+      
+      &--green {
+        background-color: $green-500;
+      }
+      
+      &--purple {
+        background-color: $purple-500;
+      }
+      
+      &--orange {
+        background-color: $orange-500;
+      }
+    }
+    
+    &-content {
+      flex: 1;
+    }
+    
+    &-title {
+      font-size: 0.875rem; // text-sm
+      font-weight: 500;
+      color: $gray-600;
+      margin-bottom: $spacing-1;
+    }
+    
+    &-value {
+      font-size: 1.5rem; // text-2xl
+      font-weight: 700;
+      color: $gray-900;
+    }
+    
+    &-change {
+      margin-top: $spacing-4;
+      
+      &-value {
+        font-size: 0.875rem; // text-sm
+        font-weight: 500;
+        color: $green-600;
+      }
+      
+      &-label {
+        font-size: 0.875rem; // text-sm
+        color: $gray-500;
+        margin-left: $spacing-1;
+      }
+    }
+  }
+}
+
+// Activity feed
+.activity {
+  &__item {
+    @include flex-start;
+    margin-bottom: $spacing-4;
+    
+    &:last-child {
+      margin-bottom: 0;
+    }
+  }
+  
+  &__indicator {
+    width: 0.5rem; // w-2
+    height: 0.5rem; // h-2
+    border-radius: 50%;
+    margin-right: $spacing-3;
+    flex-shrink: 0;
+    
+    &--green {
+      background-color: $green-500;
+    }
+    
+    &--blue {
+      background-color: $blue-500;
+    }
+    
+    &--purple {
+      background-color: $purple-500;
+    }
+  }
+  
+  &__content {
+    flex: 1;
+    font-size: 0.875rem; // text-sm
+    color: $gray-600;
+  }
+  
+  &__time {
+    font-size: 0.75rem; // text-xs
+    color: $gray-400;
+    margin-left: auto;
+  }
+} 

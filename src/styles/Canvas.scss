@@ -1,0 +1,145 @@
+.canvas-container {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+  position: relative;
+  
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: 
+      radial-gradient(circle at 20% 20%, rgba(59, 130, 246, 0.05) 0%, transparent 50%),
+      radial-gradient(circle at 80% 80%, rgba(147, 51, 234, 0.05) 0%, transparent 50%);
+    pointer-events: none;
+  }
+}
+
+.canvas-stage {
+  border: 2px solid #e2e8f0;
+  background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+  border-radius: 16px;
+  box-shadow: 
+    0 20px 25px -5px rgba(0, 0, 0, 0.1),
+    0 10px 10px -5px rgba(0, 0, 0, 0.04),
+    0 0 0 1px rgba(255, 255, 255, 0.05);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+  
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    // background: 
+    //   linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.1) 50%, transparent 100%);
+    pointer-events: none;
+    // animation: shimmer 3s ease-in-out infinite;
+  }
+  
+  &:hover {
+    box-shadow: 
+      0 25px 50px -12px rgba(0, 0, 0, 0.25),
+      0 0 0 1px rgba(59, 130, 246, 0.1);
+    transform: translateY(-2px);
+  }
+}
+
+@keyframes shimmer {
+  0%, 100% {
+    opacity: 0;
+    transform: translateX(-100%);
+  }
+  50% {
+    opacity: 1;
+    transform: translateX(100%);
+  }
+}
+
+// Konva 요소들의 스타일 개선
+.konva-container {
+  border-radius: 16px;
+  overflow: hidden;
+}
+
+// 선택된 요소의 Transformer 스타일
+.konva-transformer {
+  .konva-transformer__anchor {
+    transition: all 0.2s ease;
+    
+    &:hover {
+      transform: scale(1.2);
+    }
+  }
+}
+
+// 격자 배경 개선
+.grid-background {
+  opacity: 0.6;
+  transition: opacity 0.3s ease;
+  
+  &:hover {
+    opacity: 0.8;
+  }
+}
+
+// 요소 호버 효과
+.element-hover {
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  
+  &:hover {
+    transform: scale(1.02);
+  }
+}
+
+// 선택된 요소 스타일
+.element-selected {
+  filter: drop-shadow(0 4px 6px rgba(59, 130, 246, 0.3));
+}
+
+// 반응형 디자인
+@media (max-width: 768px) {
+  .canvas-container {
+    padding: 10px;
+  }
+  
+  .canvas-stage {
+    border-radius: 12px;
+    box-shadow: 
+      0 10px 15px -3px rgba(0, 0, 0, 0.1),
+      0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  }
+}
+
+// 다크 모드 지원 (선택적)
+@media (prefers-color-scheme: dark) {
+  .canvas-container {
+    background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+    
+    &::before {
+      background: 
+        radial-gradient(circle at 20% 20%, rgba(59, 130, 246, 0.1) 0%, transparent 50%),
+        radial-gradient(circle at 80% 80%, rgba(147, 51, 234, 0.1) 0%, transparent 50%);
+    }
+  }
+  
+  .canvas-stage {
+    border-color: #475569;
+    background: linear-gradient(135deg, #334155 0%, #1e293b 100%);
+    box-shadow: 
+      0 20px 25px -5px rgba(0, 0, 0, 0.3),
+      0 10px 10px -5px rgba(0, 0, 0, 0.2),
+      0 0 0 1px rgba(255, 255, 255, 0.1);
+  }
+} 

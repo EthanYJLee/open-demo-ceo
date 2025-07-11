@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { branchService } from "../services/supabase";
 import BranchForm from "../components/BranchManager/BranchForm";
+import "../styles/main.scss";
 
 const BranchManagement = () => {
   const [branches, setBranches] = useState([]);
@@ -58,87 +59,80 @@ const BranchManagement = () => {
 
   if (loading) {
     return (
-      <div className="p-6">
-        <div className="flex items-center justify-center h-64">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-500"></div>
+      <div className="page">
+        <div className="loading">
+          <div className="loading__spinner"></div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="p-6">
-      <div className="flex justify-between items-center mb-6">
+    <div className="page">
+      <div className="branch-management__header">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">지점 관리</h1>
-          <p className="text-gray-600 mt-2">등록된 지점들을 관리하세요</p>
+          <h1 className="branch-management__title">지점 관리</h1>
+          <p className="branch-management__subtitle">
+            등록된 지점들을 관리하세요
+          </p>
         </div>
         <button
           onClick={() => setShowForm(true)}
-          className="bg-primary-500 hover:bg-primary-600 text-white px-4 py-2 rounded-lg flex items-center"
+          className="branch-management__add-button"
         >
-          <span className="mr-2">➕</span>새 지점 등록
+          <span>➕</span>새 지점 등록
         </button>
       </div>
 
       {/* 지점 목록 */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className="branch-management__grid">
         {branches.map((branch) => (
-          <div
-            key={branch.id}
-            className="bg-white rounded-lg shadow-md overflow-hidden"
-          >
-            <div className="h-48 bg-gray-200 flex items-center justify-center">
+          <div key={branch.id} className="branch-management__card">
+            <div className="branch-management__card-image">
               {branch.images && branch.images.length > 0 ? (
-                <img
-                  src={branch.images[0]}
-                  alt={branch.name}
-                  className="w-full h-full object-cover"
-                />
+                <img src={branch.images[0]} alt={branch.name} />
               ) : (
-                <span className="text-gray-400 text-4xl">🏢</span>
+                <span className="placeholder">🏢</span>
               )}
             </div>
 
-            <div className="p-6">
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                {branch.name}
-              </h3>
+            <div className="branch-management__card-content">
+              <h3 className="branch-management__card-title">{branch.name}</h3>
 
-              <div className="space-y-2 mb-4">
-                <div className="flex items-center text-sm text-gray-600">
-                  <span className="mr-2">📍</span>
+              <div className="branch-management__card-info">
+                <div className="branch-management__card-info-item">
+                  <span>📍</span>
                   <span>{branch.address}</span>
                 </div>
-                <div className="flex items-center text-sm text-gray-600">
-                  <span className="mr-2">📞</span>
+                <div className="branch-management__card-info-item">
+                  <span>📞</span>
                   <span>{branch.phone}</span>
                 </div>
               </div>
 
-              <div className="flex items-center justify-between">
-                <div className="flex space-x-2">
+              <div className="branch-management__card-actions">
+                <div className="branch-management__card-actions-left">
                   <Link
                     to={`/layout/${branch.id}`}
-                    className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded text-sm flex items-center"
+                    className="branch-management__action-button branch-management__action-button--layout"
                   >
-                    <span className="mr-1">📐</span>
+                    <span>📐</span>
                     레이아웃
                   </Link>
                   <button
                     onClick={() => setEditingBranch(branch)}
-                    className="bg-gray-500 hover:bg-gray-600 text-white px-3 py-1 rounded text-sm flex items-center"
+                    className="branch-management__action-button branch-management__action-button--edit"
                   >
-                    <span className="mr-1">✏️</span>
+                    <span>✏️</span>
                     수정
                   </button>
                 </div>
 
                 <button
                   onClick={() => handleDeleteBranch(branch.id)}
-                  className="text-red-500 hover:text-red-700"
+                  className="branch-management__card-actions-right"
                 >
-                  <span className="text-xl">🗑️</span>
+                  <span>🗑️</span>
                 </button>
               </div>
             </div>
@@ -148,8 +142,8 @@ const BranchManagement = () => {
 
       {/* 지점 등록/수정 폼 모달 */}
       {(showForm || editingBranch) && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-md">
+        <div className="modal__overlay">
+          <div className="modal__content">
             <BranchForm
               branch={editingBranch}
               onSubmit={editingBranch ? handleUpdateBranch : handleCreateBranch}

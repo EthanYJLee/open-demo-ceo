@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import "../../styles/main.scss";
 
 const BranchForm = ({ branch, onSubmit, onCancel }) => {
   const [formData, setFormData] = useState({
@@ -62,182 +63,153 @@ const BranchForm = ({ branch, onSubmit, onCancel }) => {
   };
 
   return (
-    <div className="w-full max-w-md">
-      <div className="flex justify-between items-center mb-4">
-        <h2 className="text-xl font-semibold text-gray-900">
-          {branch ? "지점 수정" : "새 지점 등록"}
-        </h2>
-        <button
-          onClick={onCancel}
-          className="text-gray-400 hover:text-gray-600"
-        >
-          <span className="text-xl">✕</span>
+    <div className="form">
+      <div className="form__header">
+        <h2 className="form__title">{branch ? "지점 수정" : "새 지점 등록"}</h2>
+        <button onClick={onCancel} className="form__close-button">
+          <span>✕</span>
         </button>
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            지점명 *
-          </label>
+      <form onSubmit={handleSubmit} className="form__body">
+        <div className="form__group">
+          <label className="form__label">지점명 *</label>
           <input
             type="text"
             name="name"
             value={formData.name}
             onChange={handleChange}
             required
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+            className="form__input"
           />
         </div>
 
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            주소 *
-          </label>
+        <div className="form__group">
+          <label className="form__label">주소 *</label>
           <input
             type="text"
             name="address"
             value={formData.address}
             onChange={handleChange}
             required
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+            className="form__input"
           />
         </div>
 
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              시/도
-            </label>
+        <div className="form__row">
+          <div className="form__group">
+            <label className="form__label">시/도</label>
             <input
               type="text"
               name="city"
               value={formData.city}
               onChange={handleChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+              className="form__input"
             />
           </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              구/군
-            </label>
+          <div className="form__group">
+            <label className="form__label">구/군</label>
             <input
               type="text"
               name="district"
               value={formData.district}
               onChange={handleChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+              className="form__input"
             />
           </div>
         </div>
 
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            전화번호 *
-          </label>
+        <div className="form__group">
+          <label className="form__label">전화번호 *</label>
           <input
             type="tel"
             name="phone"
             value={formData.phone}
             onChange={handleChange}
             required
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+            className="form__input"
           />
         </div>
 
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            설명 *
-          </label>
+        <div className="form__group">
+          <label className="form__label">설명 *</label>
           <textarea
             name="description"
             value={formData.description}
             onChange={handleChange}
             required
             rows={3}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+            className="form__textarea"
           />
         </div>
 
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              위도
-            </label>
+        <div className="form__row">
+          <div className="form__group">
+            <label className="form__label">위도</label>
             <input
               type="number"
               step="any"
               name="latitude"
               value={formData.latitude}
               onChange={handleChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+              className="form__input"
             />
           </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              경도
-            </label>
+          <div className="form__group">
+            <label className="form__label">경도</label>
             <input
               type="number"
               step="any"
               name="longitude"
               value={formData.longitude}
               onChange={handleChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+              className="form__input"
             />
           </div>
         </div>
 
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            매니저 이름 *
-          </label>
+        <div className="form__group">
+          <label className="form__label">매니저 이름 *</label>
           <input
             type="text"
             name="manager_name"
             value={formData.manager_name}
             onChange={handleChange}
             required
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+            className="form__input"
           />
         </div>
 
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            매니저 전화번호 *
-          </label>
+        <div className="form__group">
+          <label className="form__label">매니저 전화번호 *</label>
           <input
             type="tel"
             name="manager_phone"
             value={formData.manager_phone}
             onChange={handleChange}
             required
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+            className="form__input"
           />
         </div>
 
-        <div className="flex items-center">
+        <div className="form__checkbox">
           <input
             type="checkbox"
             name="is_active"
             checked={formData.is_active}
             onChange={handleChange}
-            className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
           />
-          <label className="ml-2 block text-sm text-gray-900">활성 상태</label>
+          <label>활성 상태</label>
         </div>
 
-        <div className="flex space-x-3 pt-4">
-          <button
-            type="submit"
-            className="flex-1 bg-primary-500 hover:bg-primary-600 text-white py-2 px-4 rounded-md font-medium"
-          >
+        <div className="form__actions">
+          <button type="submit" className="btn btn--primary btn--full">
             {branch ? "수정" : "등록"}
           </button>
           <button
             type="button"
             onClick={onCancel}
-            className="flex-1 bg-gray-300 hover:bg-gray-400 text-gray-700 py-2 px-4 rounded-md font-medium"
+            className="btn btn--secondary btn--full"
           >
             취소
           </button>

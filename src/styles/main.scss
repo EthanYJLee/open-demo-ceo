@@ -1,0 +1,17 @@
+// Import Tailwind CSS
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+// Import custom styles
+@import 'variables';
+@import 'mixins';
+@import 'base';
+@import 'layout';
+@import 'components';
+@import 'pages';
+
+// Import component-specific styles
+@import 'Toolbar';
+@import 'Canvas';
+@import 'PropertiesPanel'; 

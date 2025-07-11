@@ -1,0 +1,191 @@
+// Flexbox mixins
+@mixin flex-center {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+@mixin flex-start {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+}
+
+@mixin flex-between {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+@mixin flex-col {
+  display: flex;
+  flex-direction: column;
+}
+
+@mixin flex-row {
+  display: flex;
+  flex-direction: row;
+}
+
+// Button mixins
+@mixin button-base {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: $spacing-2 $spacing-4;
+  font-size: 0.875rem; // text-sm
+  font-weight: 500;
+  border-radius: $border-radius;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: $transition-colors;
+  text-decoration: none;
+  
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}
+
+@mixin button-primary {
+  background-color: $primary-600;
+  color: white;
+  border-color: $primary-600;
+  
+  &:hover:not(:disabled) {
+    background-color: $primary-700;
+    border-color: $primary-700;
+  }
+  
+  &:focus {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+  }
+}
+
+@mixin button-secondary {
+  background-color: white;
+  color: $gray-700;
+  border-color: $gray-300;
+  
+  &:hover:not(:disabled) {
+    background-color: $gray-50;
+    border-color: $gray-400;
+  }
+  
+  &:focus {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+  }
+}
+
+@mixin button-danger {
+  background-color: $red-600;
+  color: white;
+  border-color: $red-600;
+  
+  &:hover:not(:disabled) {
+    background-color: $red-700;
+    border-color: $red-700;
+  }
+  
+  &:focus {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1);
+  }
+}
+
+// Card mixins
+@mixin card-base {
+  background-color: white;
+  border: 1px solid $gray-200;
+  border-radius: $border-radius-lg;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+}
+
+@mixin card-hover {
+  transition: $transition-all;
+  
+  &:hover {
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  }
+}
+
+// Input mixins
+@mixin input-base {
+  width: 100%;
+  padding: $spacing-2 $spacing-3;
+  font-size: 0.875rem; // text-sm
+  border: 1px solid $gray-300;
+  border-radius: $border-radius;
+  background-color: white;
+  transition: $transition-colors;
+  
+  &:focus {
+    outline: none;
+    border-color: $primary-500;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+  }
+  
+  &::placeholder {
+    color: $gray-400;
+  }
+}
+
+// Modal mixins
+@mixin modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: $spacing-4;
+}
+
+@mixin modal-content {
+  background-color: white;
+  border-radius: $border-radius-lg;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  max-width: 90vw;
+  max-height: 90vh;
+  overflow-y: auto;
+  padding: $spacing-6;
+}
+
+// Loading mixins
+@mixin loading-spinner {
+  display: inline-block;
+  width: 1rem; // w-4
+  height: 1rem; // h-4
+  border: 2px solid transparent;
+  border-top-color: currentColor;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+// Responsive mixins
+@mixin responsive($breakpoint) {
+  @if $breakpoint == sm {
+    @media (min-width: 640px) { @content; }
+  } @else if $breakpoint == md {
+    @media (min-width: 768px) { @content; }
+  } @else if $breakpoint == lg {
+    @media (min-width: 1024px) { @content; }
+  } @else if $breakpoint == xl {
+    @media (min-width: 1280px) { @content; }
+  } @else if $breakpoint == 2xl {
+    @media (min-width: 1536px) { @content; }
+  }
+}
+
+// Animations
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+} 

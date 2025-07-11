@@ -1,0 +1,625 @@
+@import 'variables';
+@import 'mixins';
+
+// Dashboard page
+.dashboard {
+  &__stats {
+    margin-bottom: $spacing-8;
+  }
+  
+  &__recent-activity {
+    @include card-base;
+  }
+}
+
+// Branch Management page
+.branch-management {
+  &__header {
+    @include flex-between;
+    margin-bottom: $spacing-6;
+  }
+  
+  &__title {
+    font-size: 1.875rem; // text-3xl
+    font-weight: 700;
+    color: $gray-900;
+    margin-bottom: $spacing-2;
+  }
+  
+  &__subtitle {
+    color: $gray-600;
+  }
+  
+  &__add-button {
+    @include button-base;
+    background: linear-gradient(135deg, $primary-600 0%, $primary-500 100%);
+    color: white;
+    border: none;
+    padding: $spacing-3 $spacing-6;
+    font-size: 1rem; // text-base
+    font-weight: 600;
+    border-radius: $border-radius-lg;
+    box-shadow: 0 4px 14px 0 rgba(59, 130, 246, 0.25);
+    transition: all 0.2s ease-in-out;
+    @include flex-start;
+    
+    &:hover {
+      background: linear-gradient(135deg, $primary-700 0%, $primary-600 100%);
+      box-shadow: 0 6px 20px 0 rgba(59, 130, 246, 0.35);
+      transform: translateY(-1px);
+    }
+    
+    &:active {
+      transform: translateY(0);
+      box-shadow: 0 2px 8px 0 rgba(59, 130, 246, 0.25);
+    }
+    
+    span {
+      margin-right: $spacing-2;
+      font-size: 1.125rem; // text-lg
+    }
+  }
+  
+  &__grid {
+    display: grid;
+    grid-template-columns: repeat(1, minmax(0, 1fr));
+    gap: $spacing-6;
+    
+    @include responsive(md) {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+    
+    @include responsive(lg) {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+  }
+  
+  &__card {
+    @include card-base;
+    overflow: hidden;
+    
+    &-image {
+      height: 12rem; // h-48
+      background-color: $gray-200;
+      @include flex-center;
+      
+      img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+      }
+      
+      .placeholder {
+        color: $gray-400;
+        font-size: 2.5rem; // text-4xl
+      }
+    }
+    
+    &-content {
+      padding: $spacing-6;
+    }
+    
+    &-title {
+      font-size: 1.125rem; // text-lg
+      font-weight: 600;
+      color: $gray-900;
+      margin-bottom: $spacing-2;
+    }
+    
+    &-info {
+      @include flex-col;
+      gap: $spacing-2;
+      margin-bottom: $spacing-4;
+      
+      &-item {
+        @include flex-start;
+        font-size: 0.875rem; // text-sm
+        color: $gray-600;
+        
+        span:first-child {
+          margin-right: $spacing-2;
+        }
+      }
+    }
+    
+    &-actions {
+      @include flex-between;
+      
+      &-left {
+        @include flex-start;
+        gap: $spacing-2;
+      }
+      
+      &-right {
+        color: $red-500;
+        background: none;
+        border: none;
+        font-size: 1.25rem; // text-xl
+        cursor: pointer;
+        
+        &:hover {
+          color: $red-700;
+        }
+      }
+    }
+  }
+  
+  &__action-button {
+    @include flex-start;
+    padding: $spacing-1 $spacing-3;
+    font-size: 0.875rem; // text-sm
+    border-radius: $border-radius;
+    text-decoration: none;
+    transition: $transition-colors;
+    
+    span {
+      margin-right: $spacing-1;
+    }
+    
+    &--layout {
+      background-color: $blue-500;
+      color: white;
+      
+      &:hover {
+        background-color: $blue-600;
+      }
+    }
+    
+    &--edit {
+      background-color: $gray-500;
+      color: white;
+      
+      &:hover {
+        background-color: $gray-600;
+      }
+    }
+  }
+}
+
+// Layout Editor page
+.layout-editor {
+  height: 100vh;
+  @include flex-col;
+  
+  &__header {
+    background-color: white;
+    border-bottom: 1px solid $gray-200;
+    padding: $spacing-4 $spacing-6;
+    
+    &-content {
+      @include flex-between;
+    }
+    
+    &-left {
+      @include flex-start;
+      gap: $spacing-4;
+    }
+    
+    &-back-button {
+      color: $gray-600;
+      background: none;
+      border: none;
+      font-size: 1.25rem; // text-xl
+      cursor: pointer;
+      
+      &:hover {
+        color: $gray-900;
+      }
+    }
+    
+    &-title-section {
+      @include flex-start;
+      gap: $spacing-2;
+    }
+    
+    &-title {
+      font-size: 1.25rem; // text-xl
+      font-weight: 600;
+      color: $gray-900;
+    }
+    
+    &-help-button {
+      color: $gray-400;
+      background: none;
+      border: none;
+      cursor: pointer;
+      transition: $transition-colors;
+      
+      &:hover {
+        color: $gray-600;
+      }
+      
+      svg {
+        width: 1.25rem; // w-5
+        height: 1.25rem; // h-5
+      }
+    }
+    
+    &-subtitle {
+      font-size: 0.875rem; // text-sm
+      color: $gray-600;
+    }
+    
+    &-right {
+      @include flex-start;
+      gap: $spacing-4;
+    }
+    
+    &-floor-controls {
+      @include flex-start;
+      gap: $spacing-2;
+      
+      label {
+        font-size: 0.875rem; // text-sm
+        font-weight: 500;
+        color: $gray-700;
+      }
+      
+      select {
+        border: 1px solid $gray-300;
+        border-radius: $border-radius;
+        padding: $spacing-1 $spacing-2;
+        font-size: 0.875rem; // text-sm
+      }
+      
+      button {
+        color: $gray-600;
+        background: none;
+        border: none;
+        font-size: 1rem; // text-base
+        cursor: pointer;
+        
+        &:hover {
+          color: $gray-900;
+        }
+        
+        svg {
+          width: 1rem; // w-4
+          height: 1rem; // h-4
+        }
+      }
+    }
+    
+    &-save-controls {
+      @include flex-start;
+      gap: $spacing-2;
+      
+      &-warning {
+        font-size: 0.875rem; // text-sm
+        font-weight: 500;
+        color: $orange-600;
+      }
+      
+      &-save-button {
+        @include button-primary;
+        padding: $spacing-2 $spacing-4;
+        font-weight: 500;
+        
+        &:disabled {
+          background-color: $gray-400;
+        }
+      }
+      
+      &-reset-button {
+        @include button-danger;
+        padding: $spacing-2 $spacing-4;
+        font-weight: 500;
+      }
+    }
+  }
+  
+  &__main {
+    flex: 1;
+    @include flex-row;
+    align-items: flex-start;
+    min-height: 37.5rem; // min-h-[600px]
+  }
+  
+  &__toolbar {
+    width: 7.5rem; // w-30 (96px)
+    background-color: $gray-50;
+    border-right: 1px solid $gray-200;
+    height: 100%;
+  }
+  
+  &__canvas {
+    flex: 1;
+    background-color: $gray-100;
+    padding: $spacing-4;
+    height: 100%;
+    @include flex-start;
+  }
+  
+  &__properties {
+    width: 20rem; // w-80
+    background-color: white;
+    border-left: 1px solid $gray-200;
+    height: 100%;
+  }
+  
+  &__modal {
+    @include modal-overlay;
+    
+    &-content {
+      @include modal-content;
+      max-width: 28rem; // max-w-md
+      width: 100%;
+      margin: 0 $spacing-4;
+    }
+    
+    &-header {
+      @include flex-between;
+      margin-bottom: $spacing-4;
+      
+      &-title {
+        font-size: 1.25rem; // text-xl
+        font-weight: 600;
+        color: $gray-900;
+      }
+      
+      &-close {
+        color: $gray-400;
+        background: none;
+        border: none;
+        cursor: pointer;
+        
+        &:hover {
+          color: $gray-600;
+        }
+        
+        svg {
+          width: 1.5rem; // w-6
+          height: 1.5rem; // h-6
+        }
+      }
+    }
+    
+    &-body {
+      @include flex-col;
+      gap: $spacing-4;
+    }
+    
+    &-section {
+      &-title {
+        font-size: 1.125rem; // text-lg
+        font-weight: 500;
+        color: $gray-900;
+        margin-bottom: $spacing-2;
+      }
+      
+      &-content {
+        @include flex-col;
+        gap: $spacing-2;
+      }
+    }
+    
+    &-floor-item {
+      @include flex-between;
+      padding: $spacing-3;
+      background-color: $gray-50;
+      border-radius: $border-radius;
+      
+      &-name {
+        font-weight: 500;
+      }
+      
+      &-actions {
+        @include flex-start;
+        gap: $spacing-2;
+      }
+      
+      &-current {
+        font-size: 0.75rem; // text-xs
+        background-color: $blue-100;
+        color: $blue-800;
+        padding: $spacing-1 $spacing-2;
+        border-radius: $border-radius;
+      }
+      
+      &-edit {
+        color: $blue-500;
+        background: none;
+        border: none;
+        cursor: pointer;
+        
+        &:hover {
+          color: $blue-700;
+        }
+        
+        svg {
+          width: 1rem; // w-4
+          height: 1rem; // h-4
+        }
+      }
+      
+      &-delete {
+        color: $red-500;
+        background: none;
+        border: none;
+        cursor: pointer;
+        
+        &:hover {
+          color: $red-700;
+        }
+        
+        svg {
+          width: 1rem; // w-4
+          height: 1rem; // h-4
+        }
+      }
+    }
+    
+    &-floor-edit {
+      @include flex-between;
+      width: 100%;
+      gap: $spacing-2;
+      
+      &-input {
+        width: 4rem; // w-16
+        padding: $spacing-1 $spacing-2;
+        border: 1px solid $gray-300;
+        border-radius: $border-radius;
+        font-size: 0.875rem; // text-sm
+        text-align: center;
+        
+        &:focus {
+          outline: none;
+          border-color: $blue-500;
+          box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+      }
+      
+      &-label {
+        font-size: 0.875rem; // text-sm
+        color: $gray-600;
+        font-weight: 500;
+      }
+      
+      &-actions {
+        @include flex-start;
+        gap: $spacing-1;
+      }
+      
+      &-save {
+        color: $green-600;
+        background: none;
+        border: none;
+        cursor: pointer;
+        padding: $spacing-1;
+        border-radius: $border-radius-sm;
+        
+        &:hover {
+          background-color: $green-50;
+        }
+        
+        svg {
+          width: 1rem; // w-4
+          height: 1rem; // h-4
+        }
+      }
+      
+      &-cancel {
+        color: $gray-500;
+        background: none;
+        border: none;
+        cursor: pointer;
+        padding: $spacing-1;
+        border-radius: $border-radius-sm;
+        
+        &:hover {
+          background-color: $gray-100;
+        }
+        
+        svg {
+          width: 1rem; // w-4
+          height: 1rem; // h-4
+        }
+      }
+    }
+    
+    &-add-button {
+      @include button-primary;
+      width: 100%;
+      padding: $spacing-2 $spacing-4;
+      font-weight: 500;
+    }
+  }
+  
+  &__help {
+    @include modal-overlay;
+    
+    &-content {
+      @include modal-content;
+      max-width: 42rem; // max-w-2xl
+      max-height: 80vh;
+      overflow-y: auto;
+    }
+    
+    &-header {
+      @include flex-between;
+      margin-bottom: $spacing-4;
+      
+      &-title {
+        font-size: 1.25rem; // text-xl
+        font-weight: 600;
+        color: $gray-900;
+      }
+      
+      &-close {
+        color: $gray-400;
+        background: none;
+        border: none;
+        cursor: pointer;
+        
+        &:hover {
+          color: $gray-600;
+        }
+        
+        svg {
+          width: 1.5rem; // w-6
+          height: 1.5rem; // h-6
+        }
+      }
+    }
+    
+    &-body {
+      @include flex-col;
+      gap: $spacing-4;
+    }
+    
+    &-section {
+      &-title {
+        font-size: 1.125rem; // text-lg
+        font-weight: 500;
+        color: $gray-900;
+        margin-bottom: $spacing-2;
+      }
+      
+      &-content {
+        @include flex-col;
+        gap: $spacing-2;
+        font-size: 0.875rem; // text-sm
+        color: $gray-700;
+      }
+    }
+    
+    &-examples {
+      background-color: $gray-100;
+      padding: $spacing-4;
+      border-radius: $border-radius-lg;
+      
+      &-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: $spacing-4;
+      }
+      
+      &-item {
+        background-color: white;
+        padding: $spacing-3;
+        border-radius: $border-radius;
+        border: 1px solid $gray-200;
+        
+        &-title {
+          font-weight: 500;
+          font-size: 0.875rem; // text-sm
+          margin-bottom: $spacing-2;
+        }
+        
+        &-content {
+          @include flex-col;
+          gap: $spacing-1;
+          font-size: 0.75rem; // text-xs
+          color: $gray-600;
+        }
+      }
+    }
+    
+    &-elements {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: $spacing-4;
+      font-size: 0.875rem; // text-sm
+    }
+  }
+} 

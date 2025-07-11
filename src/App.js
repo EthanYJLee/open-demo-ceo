@@ -1,7 +1,6 @@
 import React from "react";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
-import "./App.css";
-import "./index.css";
+import "./styles/main.scss";
 import Dashboard from "./pages/Dashboard";
 import BranchManagement from "./pages/BranchManagement";
 import LayoutEditor from "./pages/LayoutEditor";
@@ -10,9 +9,9 @@ import Sidebar from "./components/common/Sidebar";
 function App() {
   return (
     <Router>
-      <div className="flex h-screen bg-gray-50">
+      <div className="app">
         <Sidebar />
-        <main className="flex-1 overflow-auto">
+        <main className="main-content">
           <Routes>
             <Route path="/" element={<Dashboard />} />
             <Route path="/branches" element={<BranchManagement />} />
