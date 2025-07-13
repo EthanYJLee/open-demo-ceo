@@ -1,7 +1,7 @@
 import React from "react";
 import "../../styles/Toolbar.scss";
 
-const Toolbar = ({ onAddElement, onDeleteSelected, selectedId }) => {
+const Toolbar = ({ onAddElement, onDeleteSelected, selectedIds }) => {
   const tools = [
     {
       id: "space",
@@ -47,11 +47,114 @@ const Toolbar = ({ onAddElement, onDeleteSelected, selectedId }) => {
       action: () => onAddElement("text"),
       tooltip: "텍스트 추가 (라벨, 안내문 등)",
     },
+    {
+      id: "hallway",
+      icon: (
+        <svg viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5">
+          {/* 복도 배경 */}
+          <rect
+            x="2"
+            y="4"
+            width="20"
+            height="16"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.5"
+            rx="2"
+          />
+          {/* 복도 중앙선 */}
+          <line
+            x1="12"
+            y1="4"
+            x2="12"
+            y2="20"
+            stroke="currentColor"
+            strokeWidth="1.5"
+            strokeDasharray="2,2"
+          />
+          {/* 복도 양쪽 경계선 */}
+          <line
+            x1="6"
+            y1="4"
+            x2="6"
+            y2="20"
+            stroke="currentColor"
+            strokeWidth="1"
+            strokeDasharray="1,1"
+          />
+          <line
+            x1="18"
+            y1="4"
+            x2="18"
+            y2="20"
+            stroke="currentColor"
+            strokeWidth="1"
+            strokeDasharray="1,1"
+          />
+          {/* 복도 방향 화살표 */}
+          <g transform="translate(8, 8)">
+            <line
+              x1="0"
+              y1="2"
+              x2="6"
+              y2="2"
+              stroke="currentColor"
+              strokeWidth="1.5"
+            />
+            <line
+              x1="6"
+              y1="2"
+              x2="4"
+              y2="0"
+              stroke="currentColor"
+              strokeWidth="1.5"
+            />
+            <line
+              x1="6"
+              y1="2"
+              x2="4"
+              y2="4"
+              stroke="currentColor"
+              strokeWidth="1.5"
+            />
+          </g>
+          <g transform="translate(8, 14)">
+            <line
+              x1="0"
+              y1="2"
+              x2="6"
+              y2="2"
+              stroke="currentColor"
+              strokeWidth="1.5"
+            />
+            <line
+              x1="6"
+              y1="2"
+              x2="4"
+              y2="0"
+              stroke="currentColor"
+              strokeWidth="1.5"
+            />
+            <line
+              x1="6"
+              y1="2"
+              x2="4"
+              y2="4"
+              stroke="currentColor"
+              strokeWidth="1.5"
+            />
+          </g>
+        </svg>
+      ),
+      label: "복도",
+      action: () => onAddElement("hallway"),
+      tooltip: "복도 추가 (통로 및 이동 경로)",
+    },
   ];
 
   // 삭제 버튼 클릭 시 확인창
   const handleDelete = () => {
-    if (selectedId && window.confirm("정말 삭제할까요?")) {
+    if (selectedIds && window.confirm("정말 삭제할까요?")) {
       onDeleteSelected();
     }
   };
@@ -86,13 +189,13 @@ const Toolbar = ({ onAddElement, onDeleteSelected, selectedId }) => {
       <div className="toolbar__actions">
         <button
           className={`toolbar__button toolbar__button--delete${
-            selectedId
+            selectedIds.length > 0
               ? " toolbar__button--active"
               : " toolbar__button--disabled"
           }`}
           title="선택된 요소 삭제"
-          onClick={selectedId ? handleDelete : undefined}
-          disabled={!selectedId}
+          onClick={selectedIds.length > 0 ? handleDelete : undefined}
+          disabled={selectedIds.length === 0}
         >
           <div className="toolbar__icon toolbar__icon--delete">
             <svg viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5">

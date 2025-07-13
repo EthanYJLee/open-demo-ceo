@@ -36,6 +36,8 @@ const PropertiesPanel = ({ element, onUpdate, onClose }) => {
   }, [element]);
 
   const handleChange = (field, value) => {
+    console.log(field);
+    console.log(value);
     setProperties((prev) => ({
       ...prev,
       [field]: value,

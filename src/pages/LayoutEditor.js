@@ -67,6 +67,25 @@ const DEFAULT_TEXT = () => ({
   fill: "#333",
 });
 
+const DEFAULT_HALLWAY = (parentId = null) => ({
+  id: uuid(),
+  type: "hallway",
+  x: 100,
+  y: 100,
+  width: 300,
+  height: 60,
+  parent: parentId,
+  properties: {
+    label: "복도",
+    direction: "horizontal", // horizontal, vertical
+  },
+  style: {
+    fill: "#f8fafc",
+    stroke: "#475569",
+    strokeWidth: 2,
+  },
+});
+
 const LayoutEditor = () => {
   const { branchId } = useParams();
   const navigate = useNavigate();
@@ -75,7 +94,7 @@ const LayoutEditor = () => {
   const [selectedTemplateId, setSelectedTemplateId] = useState("");
   // elements: 빈 배열로 시작
   const [elements, setElements] = useState([]);
-  const [selectedId, setSelectedId] = useState(null);
+  const [selectedIds, setSelectedIds] = useState([]);
   const [showProperties, setShowProperties] = useState(false);
   const [loading, setLoading] = useState(false);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
@@ -179,12 +198,12 @@ const LayoutEditor = () => {
         )
       ) {
         setCurrentFloor(floor);
-        setSelectedId(null);
+        setSelectedIds([]);
         setShowProperties(false);
       }
     } else {
       setCurrentFloor(floor);
-      setSelectedId(null);
+      setSelectedIds([]);
       setShowProperties(false);
     }
   };
@@ -314,12 +333,24 @@ const LayoutEditor = () => {
       setElements((prev) => [...prev, DEFAULT_DOOR()]);
     } else if (type === "text") {
       setElements((prev) => [...prev, DEFAULT_TEXT()]);
+    } else if (type === "hallway") {
+      setElements((prev) => [...prev, DEFAULT_HALLWAY()]);
     }
   };
 
-  // 요소 선택 핸들러
-  const handleElementSelect = (id) => {
-    setSelectedId(id);
+  // 요소 선택 핸들러 (단일/다중)
+  const handleElementSelect = (id, multi = false) => {
+    if (Array.isArray(id)) {
+      setSelectedIds(id);
+    } else if (multi) {
+      setSelectedIds((prev) =>
+        prev.includes(id) ? prev.filter((sid) => sid !== id) : [...prev, id]
+      );
+    } else if (id) {
+      setSelectedIds([id]);
+    } else {
+      setSelectedIds([]);
+    }
     setShowProperties(true);
   };
 
@@ -342,9 +373,9 @@ const LayoutEditor = () => {
 
   // 삭제 핸들러
   const handleDeleteSelected = () => {
-    if (selectedId) {
-      setElements((prev) => prev.filter((el) => el.id !== selectedId));
-      setSelectedId(null);
+    if (selectedIds.length > 0) {
+      setElements((prev) => prev.filter((el) => !selectedIds.includes(el.id)));
+      setSelectedIds([]);
       setShowProperties(false);
     }
   };
@@ -389,13 +420,13 @@ const LayoutEditor = () => {
     ) {
       setElements([]);
       setSelectedTemplateId("");
-      setSelectedId(null);
+      setSelectedIds([]);
       setShowProperties(false);
       setHasUnsavedChanges(false);
     }
   };
 
-  const selectedElement = elements.find((el) => el.id === selectedId);
+  const selectedElements = elements.filter((el) => selectedIds.includes(el.id));
 
   if (loading) {
     return (
@@ -506,7 +537,7 @@ const LayoutEditor = () => {
           <Toolbar
             onAddElement={handleAddElement}
             onDeleteSelected={handleDeleteSelected}
-            selectedId={selectedId}
+            selectedIds={selectedIds}
           />
         </div>
 
@@ -514,7 +545,7 @@ const LayoutEditor = () => {
         <div className="layout-editor__canvas">
           <Canvas
             elements={elements}
-            selectedId={selectedId}
+            selectedIds={selectedIds}
             onElementSelect={handleElementSelect}
             onElementUpdate={handleElementUpdate}
           />
@@ -522,9 +553,9 @@ const LayoutEditor = () => {
 
         {/* 속성 패널 공간: 항상 w-80 차지 */}
         <div className="layout-editor__properties">
-          {showProperties && selectedElement ? (
+          {showProperties && selectedElements.length === 1 ? (
             <PropertiesPanel
-              element={selectedElement}
+              element={selectedElements[0]}
               onUpdate={handleElementUpdate}
               onClose={() => setShowProperties(false)}
             />

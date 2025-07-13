@@ -20,25 +20,30 @@ const snapToGrid = (value) => Math.round(value / GRID_SIZE) * GRID_SIZE;
 const snapSizeToGrid = (value) =>
   Math.max(GRID_SIZE, Math.round(value / GRID_SIZE) * GRID_SIZE);
 
-const Canvas = ({ elements, selectedId, onElementSelect, onElementUpdate }) => {
+const Canvas = ({
+  elements,
+  selectedIds,
+  onElementSelect,
+  onElementUpdate,
+}) => {
   const stageRef = useRef();
   const transformerRef = useRef();
   const [hoveredId, setHoveredId] = useState(null);
+  const [selectionRect, setSelectionRect] = useState(null); // {x, y, width, height}
+  const selectionStartRef = useRef(null);
 
   useEffect(() => {
-    if (transformerRef.current && selectedId) {
+    if (transformerRef.current && selectedIds && selectedIds.length > 0) {
       const stage = stageRef.current;
-      const selectedNode = stage.findOne(`#${selectedId}`);
-      if (selectedNode) {
-        transformerRef.current.nodes([selectedNode]);
-        transformerRef.current.getLayer().batchDraw();
-      } else {
-        transformerRef.current.nodes([]);
-      }
+      const selectedNodes = selectedIds
+        .map((id) => stage.findOne(`#${id}`))
+        .filter(Boolean);
+      transformerRef.current.nodes(selectedNodes);
+      transformerRef.current.getLayer().batchDraw();
     } else if (transformerRef.current) {
       transformerRef.current.nodes([]);
     }
-  }, [selectedId, elements]);
+  }, [selectedIds, elements]);
 
   const handleElementClick = (id) => {
     onElementSelect(id);
@@ -98,6 +103,24 @@ const Canvas = ({ elements, selectedId, onElementSelect, onElementUpdate }) => {
         Math.min(MAX_SIZE, (element.height || 20) * scaleY)
       );
       const newRotation = Math.round(node.rotation() / 30) * 30; // 30도 단위로 스냅
+      const updatedElement = {
+        ...element,
+        x: snapToGrid(node.x()),
+        y: snapToGrid(node.y()),
+        width: newWidth,
+        height: newHeight,
+        rotation: newRotation,
+      };
+      onElementUpdate(updatedElement);
+    } else if (element.type === "hallway") {
+      // 복도는 45도 단위로만 회전
+      const newWidth = snapSizeToGrid(
+        Math.min(MAX_SIZE, node.width() * scaleX)
+      );
+      const newHeight = snapSizeToGrid(
+        Math.min(MAX_SIZE, node.height() * scaleY)
+      );
+      const newRotation = Math.round(node.rotation() / 45) * 45; // 45도 단위로 스냅
       const updatedElement = {
         ...element,
         x: snapToGrid(node.x()),
@@ -214,6 +237,64 @@ const Canvas = ({ elements, selectedId, onElementSelect, onElementUpdate }) => {
   const spaces = elements.filter((el) => el.type === "space");
   const others = elements.filter((el) => el.type !== "space");
 
+  // 드래그 셀렉션 시작
+  const handleStageMouseDown = (e) => {
+    // 요소 위가 아니라면 셀렉션 시작
+    if (e.target === e.target.getStage()) {
+      selectionStartRef.current = {
+        x: e.evt.offsetX,
+        y: e.evt.offsetY,
+      };
+      setSelectionRect({
+        x: e.evt.offsetX,
+        y: e.evt.offsetY,
+        width: 0,
+        height: 0,
+      });
+      onElementSelect(null); // 선택 해제
+    }
+  };
+
+  // 드래그 셀렉션 중
+  const handleStageMouseMove = (e) => {
+    if (!selectionStartRef.current) return;
+    const sx = selectionStartRef.current.x;
+    const sy = selectionStartRef.current.y;
+    const ex = e.evt.offsetX;
+    const ey = e.evt.offsetY;
+    setSelectionRect({
+      x: Math.min(sx, ex),
+      y: Math.min(sy, ey),
+      width: Math.abs(ex - sx),
+      height: Math.abs(ey - sy),
+    });
+  };
+
+  // 드래그 셀렉션 종료
+  const handleStageMouseUp = (e) => {
+    if (!selectionRect) return;
+    // 셀렉션 영역과 겹치는 요소 id 모두 선택
+    const selected = elements
+      .filter((el) => {
+        const ex = el.x;
+        const ey = el.y;
+        const ew = el.width || (el.type === "text" ? 60 : 40);
+        const eh = el.height || (el.type === "text" ? 24 : 40);
+        return (
+          ex < selectionRect.x + selectionRect.width &&
+          ex + ew > selectionRect.x &&
+          ey < selectionRect.y + selectionRect.height &&
+          ey + eh > selectionRect.y
+        );
+      })
+      .map((el) => el.id);
+    if (selected.length > 0) {
+      onElementSelect(selected, true); // 다중 선택
+    }
+    setSelectionRect(null);
+    selectionStartRef.current = null;
+  };
+
   return (
     <div className="canvas-container">
       <Stage
@@ -221,17 +302,32 @@ const Canvas = ({ elements, selectedId, onElementSelect, onElementUpdate }) => {
         width={800}
         height={600}
         className="canvas-stage"
-        onMouseDown={(e) => {
-          if (e.target === e.target.getStage()) onElementSelect(null);
-        }}
+        onMouseDown={handleStageMouseDown}
+        onMouseMove={handleStageMouseMove}
+        onMouseUp={handleStageMouseUp}
       >
         <Layer>
+          {/* 드래그 셀렉션 박스 */}
+          {selectionRect && (
+            <Rect
+              x={selectionRect.x}
+              y={selectionRect.y}
+              width={selectionRect.width}
+              height={selectionRect.height}
+              fill="#3b82f6"
+              opacity={0.15}
+              stroke="#3b82f6"
+              strokeWidth={1}
+              dash={[4, 2]}
+              listening={false}
+            />
+          )}
           {/* 격자 배경 */}
           {renderGrid()}
 
           {/* 공간 먼저 */}
           {spaces.map((el) => {
-            const isSelected = selectedId === el.id;
+            const isSelected = selectedIds.includes(el.id);
             const isHovered = hoveredId === el.id;
             const style = getElementStyle(el, isSelected, isHovered);
 
@@ -252,8 +348,8 @@ const Canvas = ({ elements, selectedId, onElementSelect, onElementUpdate }) => {
                 shadowOffset={style.shadowOffset}
                 cornerRadius={8}
                 draggable
-                onClick={() => handleElementClick(el.id)}
-                onTap={() => handleElementClick(el.id)}
+                onClick={(e) => onElementSelect(el.id, e.evt.shiftKey)}
+                onTap={(e) => onElementSelect(el.id, e.evt.shiftKey)}
                 onMouseEnter={() => setHoveredId(el.id)}
                 onMouseLeave={() => setHoveredId(null)}
                 onDragMove={(e) => handleDragMove(e, el)}
@@ -265,7 +361,7 @@ const Canvas = ({ elements, selectedId, onElementSelect, onElementUpdate }) => {
 
           {/* 나머지 요소(방, 문, 텍스트 등) */}
           {others.map((el) => {
-            const isSelected = selectedId === el.id;
+            const isSelected = selectedIds.includes(el.id);
             const isHovered = hoveredId === el.id;
 
             if (el.type === "door") {
@@ -284,8 +380,8 @@ const Canvas = ({ elements, selectedId, onElementSelect, onElementUpdate }) => {
                   y={el.y}
                   rotation={rotation}
                   draggable
-                  onClick={() => handleElementClick(el.id)}
-                  onTap={() => handleElementClick(el.id)}
+                  onClick={(e) => onElementSelect(el.id, e.evt.shiftKey)}
+                  onTap={(e) => onElementSelect(el.id, e.evt.shiftKey)}
                   onMouseEnter={() => setHoveredId(el.id)}
                   onMouseLeave={() => setHoveredId(null)}
                   onDragMove={(e) => handleDragMove(e, el)}
@@ -364,8 +460,8 @@ const Canvas = ({ elements, selectedId, onElementSelect, onElementUpdate }) => {
                     shadowOffset={style.shadowOffset}
                     cornerRadius={6}
                     draggable
-                    onClick={() => handleElementClick(el.id)}
-                    onTap={() => handleElementClick(el.id)}
+                    onClick={(e) => onElementSelect(el.id, e.evt.shiftKey)}
+                    onTap={(e) => onElementSelect(el.id, e.evt.shiftKey)}
                     onMouseEnter={() => setHoveredId(el.id)}
                     onMouseLeave={() => setHoveredId(null)}
                     onDragMove={(e) => handleDragMove(e, el)}
@@ -381,7 +477,7 @@ const Canvas = ({ elements, selectedId, onElementSelect, onElementUpdate }) => {
                       el.properties?.roomNumber || el.properties?.roomName || ""
                     }
                     fontSize={14}
-                    fontFamily="Inter, system-ui, sans-serif"
+                    fontFamily="Pretendard, system-ui, sans-serif"
                     fill="#1e293b"
                     fontWeight="600"
                     listening={false}
@@ -397,18 +493,172 @@ const Canvas = ({ elements, selectedId, onElementSelect, onElementUpdate }) => {
                   y={el.y}
                   text={el.text}
                   fontSize={el.fontSize || 16}
-                  fontFamily="Inter, system-ui, sans-serif"
+                  fontFamily="Pretendard, system-ui, sans-serif"
                   fill={isSelected ? "#3b82f6" : el.fill || "#374151"}
                   fontWeight={isSelected ? "600" : "500"}
                   draggable
-                  onClick={() => handleElementClick(el.id)}
-                  onTap={() => handleElementClick(el.id)}
+                  onClick={(e) => onElementSelect(el.id, e.evt.shiftKey)}
+                  onTap={(e) => onElementSelect(el.id, e.evt.shiftKey)}
                   onMouseEnter={() => setHoveredId(el.id)}
                   onMouseLeave={() => setHoveredId(null)}
                   onDragMove={(e) => handleDragMove(e, el)}
                   onDragEnd={(e) => handleDragEnd(e, el)}
                   onTransformEnd={(e) => handleTransformEnd(e, el)}
                 />
+              );
+            } else if (el.type === "hallway") {
+              const style = getElementStyle(el, isSelected, isHovered);
+              const hallwayWidth = el.width;
+              const hallwayHeight = el.height;
+              const rotation = el.rotation || 0;
+
+              return (
+                <Group key={el.id}>
+                  {/* 복도 배경 */}
+                  <Rect
+                    id={el.id}
+                    x={el.x}
+                    y={el.y}
+                    width={hallwayWidth}
+                    height={hallwayHeight}
+                    rotation={rotation}
+                    fill={style.fill || "#f8fafc"}
+                    stroke={style.stroke || "#475569"}
+                    strokeWidth={style.strokeWidth || 2}
+                    shadowColor={style.shadowColor}
+                    shadowBlur={style.shadowBlur}
+                    shadowOpacity={style.shadowOpacity}
+                    shadowOffset={style.shadowOffset}
+                    cornerRadius={6}
+                    draggable
+                    onClick={(e) => onElementSelect(el.id, e.evt.shiftKey)}
+                    onTap={(e) => onElementSelect(el.id, e.evt.shiftKey)}
+                    onMouseEnter={() => setHoveredId(el.id)}
+                    onMouseLeave={() => setHoveredId(null)}
+                    onDragMove={(e) => handleDragMove(e, el)}
+                    onDragEnd={(e) => handleDragEnd(e, el)}
+                    onTransformEnd={(e) => handleTransformEnd(e, el)}
+                  />
+
+                  {/* 복도 중앙선 패턴 */}
+                  <Group x={el.x} y={el.y} rotation={rotation}>
+                    {/* 중앙선 */}
+                    <Line
+                      points={[
+                        hallwayWidth / 2,
+                        0,
+                        hallwayWidth / 2,
+                        hallwayHeight,
+                      ]}
+                      stroke="#64748b"
+                      strokeWidth={2}
+                      dash={[8, 4]}
+                      listening={false}
+                    />
+
+                    {/* 복도 양쪽 경계선 */}
+                    <Line
+                      points={[4, 0, 4, hallwayHeight]}
+                      stroke="#94a3b8"
+                      strokeWidth={1}
+                      dash={[4, 4]}
+                      listening={false}
+                    />
+                    <Line
+                      points={[
+                        hallwayWidth - 4,
+                        0,
+                        hallwayWidth - 4,
+                        hallwayHeight,
+                      ]}
+                      stroke="#94a3b8"
+                      strokeWidth={1}
+                      dash={[4, 4]}
+                      listening={false}
+                    />
+
+                    {/* 복도 방향 화살표 (중앙에 여러 개 배치) */}
+                    {hallwayHeight > 40 && (
+                      <>
+                        {/* 첫 번째 화살표 */}
+                        <Group
+                          x={hallwayWidth / 2 - 8}
+                          y={hallwayHeight * 0.25}
+                        >
+                          <Line
+                            points={[0, 0, 12, 0]}
+                            stroke="#475569"
+                            strokeWidth={2}
+                            listening={false}
+                          />
+                          <Line
+                            points={[12, 0, 8, -4]}
+                            stroke="#475569"
+                            strokeWidth={2}
+                            listening={false}
+                          />
+                          <Line
+                            points={[12, 0, 8, 4]}
+                            stroke="#475569"
+                            strokeWidth={2}
+                            listening={false}
+                          />
+                        </Group>
+
+                        {/* 두 번째 화살표 */}
+                        <Group
+                          x={hallwayWidth / 2 - 8}
+                          y={hallwayHeight * 0.75}
+                        >
+                          <Line
+                            points={[0, 0, 12, 0]}
+                            stroke="#475569"
+                            strokeWidth={2}
+                            listening={false}
+                          />
+                          <Line
+                            points={[12, 0, 8, -4]}
+                            stroke="#475569"
+                            strokeWidth={2}
+                            listening={false}
+                          />
+                          <Line
+                            points={[12, 0, 8, 4]}
+                            stroke="#475569"
+                            strokeWidth={2}
+                            listening={false}
+                          />
+                        </Group>
+                      </>
+                    )}
+
+                    {/* 복도 양쪽 끝 표시 (문 형태) */}
+                    <Rect
+                      x={0}
+                      y={0}
+                      width={6}
+                      height={hallwayHeight}
+                      fill="#e2e8f0"
+                      stroke="#64748b"
+                      strokeWidth={1}
+                      cornerRadius={2}
+                      listening={false}
+                    />
+                    <Rect
+                      x={hallwayWidth - 6}
+                      y={0}
+                      width={6}
+                      height={hallwayHeight}
+                      fill="#e2e8f0"
+                      stroke="#64748b"
+                      strokeWidth={1}
+                      cornerRadius={2}
+                      listening={false}
+                    />
+                  </Group>
+
+                  {/* 복도 라벨 제거됨 */}
+                </Group>
               );
             }
             return null;

@@ -14,6 +14,7 @@ const BranchManagement = () => {
     fetchBranches();
   }, []);
 
+  // 지점 정보 받아오기 (임시)
   const fetchBranches = async () => {
     try {
       setLoading(true);
@@ -46,16 +47,16 @@ const BranchManagement = () => {
     }
   };
 
-  const handleDeleteBranch = async (id) => {
-    if (window.confirm("정말로 이 지점을 삭제하시겠습니까?")) {
-      try {
-        // 삭제 로직 구현 필요
-        fetchBranches();
-      } catch (error) {
-        console.error("Failed to delete branch:", error);
-      }
-    }
-  };
+  // const handleDeleteBranch = async (id) => {
+  //   if (window.confirm("정말로 이 지점을 삭제하시겠습니까?")) {
+  //     try {
+  //       // 삭제 로직 구현 필요
+  //       fetchBranches();
+  //     } catch (error) {
+  //       console.error("Failed to delete branch:", error);
+  //     }
+  //   }
+  // };
 
   if (loading) {
     return (
@@ -128,12 +129,12 @@ const BranchManagement = () => {
                   </button>
                 </div>
 
-                <button
+                {/* <button
                   onClick={() => handleDeleteBranch(branch.id)}
                   className="branch-management__card-actions-right"
                 >
                   <span>🗑️</span>
-                </button>
+                </button> */}
               </div>
             </div>
           </div>
