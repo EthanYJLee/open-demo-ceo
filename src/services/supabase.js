@@ -15,27 +15,27 @@ if (!supabaseUrl || !supabaseAnonKey) {
   console.error("- REACT_APP_SUPABASE_ANON_KEY");
 
   // 개발 환경에서는 더미 클라이언트 생성
-  if (process.env.NODE_ENV === "development") {
-    console.warn("Creating dummy Supabase client for development...");
-    supabase = {
-      from: () => ({
-        select: () => Promise.resolve({ data: [], error: null }),
-        insert: () =>
-          Promise.resolve({ data: null, error: new Error("Dummy client") }),
-        update: () =>
-          Promise.resolve({ data: null, error: new Error("Dummy client") }),
-        delete: () =>
-          Promise.resolve({ data: null, error: new Error("Dummy client") }),
-        eq: () => ({
-          single: () =>
-            Promise.resolve({ data: null, error: new Error("Dummy client") }),
-          order: () => Promise.resolve({ data: [], error: null }),
-        }),
-      }),
-    };
-  } else {
-    throw new Error("Missing Supabase environment variables");
-  }
+  // if (process.env.NODE_ENV === "development") {
+  //   console.warn("Creating dummy Supabase client for development...");
+  //   supabase = {
+  //     from: () => ({
+  //       select: () => Promise.resolve({ data: [], error: null }),
+  //       insert: () =>
+  //         Promise.resolve({ data: null, error: new Error("Dummy client") }),
+  //       update: () =>
+  //         Promise.resolve({ data: null, error: new Error("Dummy client") }),
+  //       delete: () =>
+  //         Promise.resolve({ data: null, error: new Error("Dummy client") }),
+  //       eq: () => ({
+  //         single: () =>
+  //           Promise.resolve({ data: null, error: new Error("Dummy client") }),
+  //         order: () => Promise.resolve({ data: [], error: null }),
+  //       }),
+  //     }),
+  //   };
+  // } else {
+  //   throw new Error("Missing Supabase environment variables");
+  // }
 } else {
   supabase = createClient(supabaseUrl, supabaseAnonKey);
 }

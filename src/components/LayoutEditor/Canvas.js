@@ -49,7 +49,20 @@ const Canvas = ({
     onElementSelect(id);
   };
 
+  const clamp = (value, min, max) => Math.max(min, Math.min(value, max));
+
   const handleDragMove = (e, element) => {
+    const node = e.target;
+    const width = element.width || node.width();
+    const height = element.height || node.height();
+
+    // Stage 크기(800x600)
+    const STAGE_WIDTH = 800;
+    const STAGE_HEIGHT = 600;
+
+    // clamp로 x, y를 항상 Stage 내부로 제한
+    node.x(clamp(node.x(), 0, STAGE_WIDTH - width));
+    node.y(clamp(node.y(), 0, STAGE_HEIGHT - height));
     // 드래그 중에도 격자에 스냅
     e.target.x(snapToGrid(e.target.x()));
     e.target.y(snapToGrid(e.target.y()));

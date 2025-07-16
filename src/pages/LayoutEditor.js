@@ -360,6 +360,10 @@ const LayoutEditor = () => {
 
   // 요소 속성 변경 핸들러 (색상/폰트 등 스타일은 제한)
   const handleElementUpdate = (updatedElement) => {
+    console.log(typeof updatedElement.x);
+    console.log(typeof updatedElement.y);
+    console.log(typeof updatedElement.width);
+    console.log(typeof updatedElement.height);
     setElements((prev) =>
       prev.map((el) =>
         el.id === updatedElement.id

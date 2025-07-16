@@ -72,9 +72,11 @@ export const layoutService = {
 
       // 더미 branch_id를 실제 UUID로 변환
       let actualBranchId = layoutData.branchId;
+      console.log("저장 시도 중...actualBranchId:", actualBranchId);
       if (
-        !actualBranchId ||
-        actualBranchId === "00000000-0000-4000-8000-000000000015"
+        !actualBranchId
+        //  ||
+        // actualBranchId === "00000000-0000-4000-8000-000000000015"
       ) {
         // 로컬 스토리지에서 기존 데이터 찾기
         const keys = Object.keys(localStorage);

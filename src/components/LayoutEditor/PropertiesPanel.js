@@ -44,6 +44,7 @@ const PropertiesPanel = ({ element, onUpdate, onClose }) => {
     }));
   };
 
+  // 속성 저장 -----------------------------------------
   const handleSave = () => {
     let updatedElement = { ...element };
     if (element.type === "room") {
@@ -80,6 +81,7 @@ const PropertiesPanel = ({ element, onUpdate, onClose }) => {
     }
     onUpdate(updatedElement);
   };
+  // ----------------------------------------- 속성 저장
 
   if (!element) return null;
 
