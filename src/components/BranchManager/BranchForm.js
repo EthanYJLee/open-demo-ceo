@@ -58,16 +58,59 @@ const BranchForm = ({ branch, onSubmit, onCancel }) => {
   //     [name]: type === "checkbox" ? checked : value,
   //   }));
   // };
+
+  // 전화번호 하이픈 포맷 추가로 삭제 (20250716)
+  // const handleChange = (e) => {
+  //   const { name, value } = e.target;
+  //   console.log("name:", name);
+  //   console.log("value:", value);
+  //   setFormData((prev) => {
+  //     const resetDistrict = name === "city" ? { district: "" } : {};
+  //     return {
+  //       ...prev,
+  //       ...resetDistrict,
+  //       [name]: value,
+  //     };
+  //   });
+  // };
   const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData((prev) => {
-      const resetDistrict = name === "city" ? { district: "" } : {};
-      return {
-        ...prev,
-        ...resetDistrict,
-        [name]: value,
-      };
-    });
+    const { name, value, type, checked } = e.target;
+
+    let newValue = value;
+    if (name === "phone" || name === "manager_phone") {
+      newValue = formatPhoneNumber(value);
+    }
+
+    const resetDistrict = name === "city" ? { district: "" } : {};
+
+    setFormData((prev) => ({
+      ...prev,
+      ...resetDistrict,
+      [name]: type === "checkbox" ? checked : newValue,
+    }));
+  };
+
+  // 전화번호 하이픈 포맷팅
+  const formatPhoneNumber = (value) => {
+    const onlyNumbers = value.replace(/\D/g, "");
+
+    if (onlyNumbers.startsWith("02")) {
+      // 서울 지역번호 (2자리)
+      if (onlyNumbers.length <= 2) return onlyNumbers;
+      if (onlyNumbers.length <= 5)
+        return onlyNumbers.replace(/(\d{2})(\d+)/, "$1-$2");
+      if (onlyNumbers.length <= 9)
+        return onlyNumbers.replace(/(\d{2})(\d{3,4})(\d{0,4})/, "$1-$2-$3");
+      return onlyNumbers.replace(/(\d{2})(\d{4})(\d{4})/, "$1-$2-$3");
+    } else {
+      // 나머지 (3자리 지역번호 또는 휴대폰)
+      if (onlyNumbers.length <= 3) return onlyNumbers;
+      if (onlyNumbers.length <= 7)
+        return onlyNumbers.replace(/(\d{3})(\d+)/, "$1-$2");
+      if (onlyNumbers.length <= 11)
+        return onlyNumbers.replace(/(\d{3})(\d{3,4})(\d{0,4})/, "$1-$2-$3");
+      return onlyNumbers.replace(/(\d{3})(\d{4})(\d{4})/, "$1-$2-$3");
+    }
   };
 
   const handleSubmit = (e) => {

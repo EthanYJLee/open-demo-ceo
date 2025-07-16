@@ -1,4 +1,4 @@
-import { supabase } from "../config/supabaseClient";
+import { supabase } from "./supabase";
 
 // 테스트용 유효한 UUID 생성 함수
 const generateTestBranchId = () => {
@@ -233,34 +233,37 @@ export const layoutService = {
     console.log("********** getLayout() **********");
     console.log("********************");
     try {
-      console.log("레이아웃 불러오기 시도:", branchId, "층:", floor);
+      console.log("레이아웃 불러오기 시도:", branchId, ", 층:", floor);
 
       // 더미 branch_id 처리
       let actualBranchId = branchId;
-      if (!branchId || branchId === "00000000-0000-4000-8000-000000000015") {
-        // 로컬 스토리지에서 기존 데이터 찾기
-        const keys = Object.keys(localStorage);
-        const layoutKeys = keys.filter((key) => key.startsWith("layout_"));
-        if (layoutKeys.length > 0) {
-          // 첫 번째 레이아웃의 branch_id 사용
-          const firstKey = layoutKeys[0];
-          actualBranchId = firstKey.split("_")[1];
-          console.log("기존 레이아웃에서 branch_id 찾음:", actualBranchId);
-        } else {
-          // 더미 데이터 정리 후 새로운 UUID 생성
-          await cleanupDummyData();
-          actualBranchId = generateTestBranchId();
-          console.log("새로운 테스트 branch_id 생성:", actualBranchId);
-        }
-      }
+      // if (!branchId || branchId === "00000000-0000-4000-8000-000000000015") {
+      //   // 로컬 스토리지에서 기존 데이터 찾기
+      //   const keys = Object.keys(localStorage);
+      //   const layoutKeys = keys.filter((key) => key.startsWith("layout_"));
+      //   if (layoutKeys.length > 0) {
+      //     // 첫 번째 레이아웃의 branch_id 사용
+      //     const firstKey = layoutKeys[0];
+      //     actualBranchId = firstKey.split("_")[1];
+      //     console.log("기존 레이아웃에서 branch_id 찾음:", actualBranchId);
+      //   } else {
+      //     // 더미 데이터 정리 후 새로운 UUID 생성
+      //     await cleanupDummyData();
+      //     actualBranchId = generateTestBranchId();
+      //     console.log("새로운 테스트 branch_id 생성:", actualBranchId);
+      //   }
+      // }
 
       // Supabase에서 정확한 층의 레이아웃 조회
+      console.log("branchId 타입 확인:", typeof actualBranchId, actualBranchId);
       const { data, error } = await supabase
         .from("space_layouts")
         .select("*")
         .eq("branch_id", actualBranchId)
         .eq("floor", floor)
-        .maybeSingle();
+        // .maybeSingle();
+        .limit(1)
+        .single();
 
       if (error) {
         console.error("Supabase 레이아웃 불러오기 오류:", error);
@@ -309,6 +312,9 @@ export const layoutService = {
         branchId === "00000000-0000-4000-8000-000000000015"
           ? generateTestBranchId()
           : branchId;
+      console.log("********** actualBranchId **********");
+      console.log(actualBranchId);
+      console.log("********** actualBranchId **********");
 
       const localData = localStorage.getItem(
         `layout_${actualBranchId}_${floor}`

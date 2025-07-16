@@ -12,6 +12,7 @@ const BranchManagement = () => {
 
   useEffect(() => {
     fetchBranches();
+    console.log("branches:", branches);
   }, []);
 
   // 지점 정보 받아오기 (임시)

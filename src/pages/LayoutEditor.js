@@ -110,6 +110,10 @@ const LayoutEditor = () => {
   // 컴포넌트 마운트 시 저장된 레이아웃 불러오기
   useEffect(() => {
     loadFloors();
+    console.log("********** LayoutEditor.js/line 113 **********");
+    console.log("********** branchId **********");
+    console.log(branchId);
+    console.log("********** branchId **********");
   }, [branchId]);
 
   // 층 변경 시 해당 층의 레이아웃 불러오기
