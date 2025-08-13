@@ -45,27 +45,97 @@ const Canvas = ({
     }
   }, [selectedIds, elements]);
 
+  // 안전 여유: stroke 절반 + 1px
+  const getSafeMargin = (el) => (el?.style?.strokeWidth ?? 2) / 2 + 1;
+
   const handleElementClick = (id) => {
     onElementSelect(id);
   };
 
   const clamp = (value, min, max) => Math.max(min, Math.min(value, max));
 
+  // rotation을 고려한 AABB offset 계산 (top-left 기준). 90도 단위 회전만 지원.
+  const rotationOffsets = (w, h, rotationDeg) => {
+    const r = ((rotationDeg % 360) + 360) % 360;
+    if (r === 0) return { minX: 0, maxX: w, minY: 0, maxY: h };
+    if (r === 90) return { minX: -h, maxX: 0, minY: 0, maxY: w };
+    if (r === 180) return { minX: -w, maxX: 0, minY: -h, maxY: 0 };
+    if (r === 270) return { minX: 0, maxX: h, minY: -w, maxY: 0 };
+    // 비정규 각도는 대략적인 보정 (cos/sin 기반) – 보수적 범위
+    const rad = (r * Math.PI) / 180;
+    const boundW = Math.abs(w * Math.cos(rad)) + Math.abs(h * Math.sin(rad));
+    const boundH = Math.abs(w * Math.sin(rad)) + Math.abs(h * Math.cos(rad));
+    return { minX: 0, maxX: boundW, minY: 0, maxY: boundH };
+  };
+
+  // const handleDragMove = (e, element) => {
+  //   const node = e.target;
+
+  //   // Stage 크기(800x600)
+  //   const STAGE_WIDTH = 800;
+  //   const STAGE_HEIGHT = 600;
+
+  //   const width = (element.width ?? node.width?.()) || node.width();
+  //   const height = (element.height ?? node.height?.()) || node.height();
+  //   const rotation = element.rotation || 0;
+
+  //   // 회전 각도에 따른 AABB offset 계산 (top-left 고정 회전 모델)
+  //   const { minX, maxX, minY, maxY } = rotationOffsets(width, height, rotation);
+
+  //   // 현재 x, y를 회전 AABB가 Stage 안에 머무르도록 보정
+  //   const minAllowedX = 0 - minX;
+  //   const maxAllowedX = STAGE_WIDTH - maxX;
+  //   const minAllowedY = 0 - minY;
+  //   const maxAllowedY = STAGE_HEIGHT - maxY;
+
+  //   const clampedX = clamp(
+  //     node.x(),
+  //     minAllowedX,
+  //     Math.max(minAllowedX, maxAllowedX)
+  //   );
+  //   const clampedY = clamp(
+  //     node.y(),
+  //     minAllowedY,
+  //     Math.max(minAllowedY, maxAllowedY)
+  //   );
+
+  //   node.x(snapToGrid(clampedX));
+  //   node.y(snapToGrid(clampedY));
+  // };
   const handleDragMove = (e, element) => {
     const node = e.target;
-    const width = element.width || node.width();
-    const height = element.height || node.height();
-
-    // Stage 크기(800x600)
     const STAGE_WIDTH = 800;
     const STAGE_HEIGHT = 600;
 
-    // clamp로 x, y를 항상 Stage 내부로 제한
-    node.x(clamp(node.x(), 0, STAGE_WIDTH - width));
-    node.y(clamp(node.y(), 0, STAGE_HEIGHT - height));
-    // 드래그 중에도 격자에 스냅
-    e.target.x(snapToGrid(e.target.x()));
-    e.target.y(snapToGrid(e.target.y()));
+    const width = (element.width ?? node.width?.()) || node.width();
+    const height = (element.height ?? node.height?.()) || node.height();
+    const rotation = element.rotation || 0;
+
+    const { minX, maxX, minY, maxY } = rotationOffsets(width, height, rotation);
+    const safe = getSafeMargin(element); // ✅ stroke/AA 여유
+
+    // - const minAllowedX = 0 - minX;
+    // - const maxAllowedX = STAGE_WIDTH - maxX;
+    // - const minAllowedY = 0 - minY;
+    // - const maxAllowedY = STAGE_HEIGHT - maxY;
+    const minAllowedX = 0 - minX + safe;
+    const maxAllowedX = STAGE_WIDTH - maxX - safe;
+    const minAllowedY = 0 - minY + safe;
+    const maxAllowedY = STAGE_HEIGHT - maxY - safe;
+
+    const clampedX = clamp(
+      node.x(),
+      minAllowedX,
+      Math.max(minAllowedX, maxAllowedX)
+    );
+    const clampedY = clamp(
+      node.y(),
+      minAllowedY,
+      Math.max(minAllowedY, maxAllowedY)
+    );
+
+    node.x(snapToGrid(clampedX));
+    node.y(snapToGrid(clampedY));
   };
 
   const handleDragEnd = (e, element) => {
@@ -77,6 +147,54 @@ const Canvas = ({
     onElementUpdate(updatedElement);
   };
 
+  // const handleTransformEnd = (e, element) => {
+  //   const node = e.target;
+  //   const scaleX = node.scaleX();
+  //   const scaleY = node.scaleY();
+  //   node.scaleX(1);
+  //   node.scaleY(1);
+
+  //   if (element.type === "space") {
+  //     // 공간은 더 큰 최대값 허용, 격자 단위로 스냅
+  //     const newWidth = snapSizeToGrid(Math.min(2000, node.width() * scaleX));
+  //     const newHeight = snapSizeToGrid(Math.min(2000, node.height() * scaleY));
+  //     const updatedElement = {
+  //       ...element,
+  //       x: snapToGrid(node.x()),
+  //       y: snapToGrid(node.y()),
+  //       width: newWidth,
+  //       height: newHeight,
+  //     };
+  //     onElementUpdate(updatedElement);
+  //   } else if (element.type === "text") {
+  //     let newFontSize = snapSizeToGrid(
+  //       Math.min(MAX_SIZE, (element.fontSize || 18) * scaleY)
+  //     );
+  //     const updatedElement = {
+  //       ...element,
+  //       x: snapToGrid(node.x()),
+  //       y: snapToGrid(node.y()),
+  //       fontSize: newFontSize,
+  //     };
+  //     onElementUpdate(updatedElement);
+  //   } else {
+  //     // 모든 요소에 대해 크기 조정만 처리 (회전은 PropertiesPanel에서 처리)
+  //     const newWidth = snapSizeToGrid(
+  //       Math.min(MAX_SIZE, (element.width || 100) * scaleX)
+  //     );
+  //     const newHeight = snapSizeToGrid(
+  //       Math.min(MAX_SIZE, (element.height || 100) * scaleY)
+  //     );
+  //     const updatedElement = {
+  //       ...element,
+  //       x: snapToGrid(node.x()),
+  //       y: snapToGrid(node.y()),
+  //       width: newWidth,
+  //       height: newHeight,
+  //     };
+  //     onElementUpdate(updatedElement);
+  //   }
+  // };
   const handleTransformEnd = (e, element) => {
     const node = e.target;
     const scaleX = node.scaleX();
@@ -84,14 +202,26 @@ const Canvas = ({
     node.scaleX(1);
     node.scaleY(1);
 
+    const safe = getSafeMargin(element);
+    const STAGE_WIDTH = 800;
+    const STAGE_HEIGHT = 600;
+
     if (element.type === "space") {
-      // 공간은 더 큰 최대값 허용, 격자 단위로 스냅
       const newWidth = snapSizeToGrid(Math.min(2000, node.width() * scaleX));
       const newHeight = snapSizeToGrid(Math.min(2000, node.height() * scaleY));
+
+      // 회전 0 기준(공간은 회전 안쓰는 설정). 경계 안전여유로 보정
+      const maxX = STAGE_WIDTH - newWidth - safe;
+      const maxY = STAGE_HEIGHT - newHeight - safe;
+      const nx = snapToGrid(clamp(node.x(), safe, Math.max(safe, maxX)));
+      const ny = snapToGrid(clamp(node.y(), safe, Math.max(safe, maxY)));
+
       const updatedElement = {
         ...element,
-        x: snapToGrid(node.x()),
-        y: snapToGrid(node.y()),
+        // -     x: snapToGrid(node.x()),
+        // -     y: snapToGrid(node.y()),
+        x: nx,
+        y: ny,
         width: newWidth,
         height: newHeight,
       };
@@ -101,63 +231,45 @@ const Canvas = ({
         Math.min(MAX_SIZE, (element.fontSize || 18) * scaleY)
       );
       const updatedElement = {
+        // -     x: snapToGrid(node.x()),
+        // -     y: snapToGrid(node.y()),
+        x: snapToGrid(clamp(node.x(), safe, STAGE_WIDTH - safe)),
+        y: snapToGrid(clamp(node.y(), safe, STAGE_HEIGHT - safe)),
         ...element,
-        x: snapToGrid(node.x()),
-        y: snapToGrid(node.y()),
         fontSize: newFontSize,
       };
       onElementUpdate(updatedElement);
-    } else if (element.type === "door") {
-      // 문은 크기 조정과 회전 모두 격자 단위로 스냅
-      const newWidth = snapSizeToGrid(
-        Math.min(MAX_SIZE, (element.width || 40) * scaleX)
-      );
-      const newHeight = snapSizeToGrid(
-        Math.min(MAX_SIZE, (element.height || 20) * scaleY)
-      );
-      const newRotation = Math.round(node.rotation() / 30) * 30; // 30도 단위로 스냅
-      const updatedElement = {
-        ...element,
-        x: snapToGrid(node.x()),
-        y: snapToGrid(node.y()),
-        width: newWidth,
-        height: newHeight,
-        rotation: newRotation,
-      };
-      onElementUpdate(updatedElement);
-    } else if (element.type === "hallway") {
-      // 복도는 45도 단위로만 회전
-      const newWidth = snapSizeToGrid(
-        Math.min(MAX_SIZE, node.width() * scaleX)
-      );
-      const newHeight = snapSizeToGrid(
-        Math.min(MAX_SIZE, node.height() * scaleY)
-      );
-      const newRotation = Math.round(node.rotation() / 45) * 45; // 45도 단위로 스냅
-      const updatedElement = {
-        ...element,
-        x: snapToGrid(node.x()),
-        y: snapToGrid(node.y()),
-        width: newWidth,
-        height: newHeight,
-        rotation: newRotation,
-      };
-      onElementUpdate(updatedElement);
     } else {
-      // room 등은 기존대로, 격자 단위로 스냅
       const newWidth = snapSizeToGrid(
-        Math.min(MAX_SIZE, node.width() * scaleX)
+        Math.min(MAX_SIZE, (element.width || 100) * scaleX)
       );
       const newHeight = snapSizeToGrid(
-        Math.min(MAX_SIZE, node.height() * scaleY)
+        Math.min(MAX_SIZE, (element.height || 100) * scaleY)
       );
+
+      // 회전 요소는 rotationOffsets로 계산해 보정
+      const { minX, maxX, minY, maxY } = rotationOffsets(
+        newWidth,
+        newHeight,
+        element.rotation || 0
+      );
+      const minAllowedX = 0 - minX + safe;
+      const maxAllowedX = STAGE_WIDTH - maxX - safe;
+      const minAllowedY = 0 - minY + safe;
+      const maxAllowedY = STAGE_HEIGHT - maxY - safe;
+
       const updatedElement = {
         ...element,
-        x: snapToGrid(node.x()),
-        y: snapToGrid(node.y()),
+        // -     x: snapToGrid(node.x()),
+        // -     y: snapToGrid(node.y()),
+        x: snapToGrid(
+          clamp(node.x(), minAllowedX, Math.max(minAllowedX, maxAllowedX))
+        ),
+        y: snapToGrid(
+          clamp(node.y(), minAllowedY, Math.max(minAllowedY, maxAllowedY))
+        ),
         width: newWidth,
         height: newHeight,
-        rotation: node.rotation(),
       };
       onElementUpdate(updatedElement);
     }
@@ -309,7 +421,7 @@ const Canvas = ({
   };
 
   return (
-    <div className="canvas-container">
+    <div className="canvas-container" style={{ padding: 1 }}>
       <Stage
         ref={stageRef}
         width={800}
@@ -687,7 +799,7 @@ const Canvas = ({
               }
               return newBox;
             }}
-            rotateEnabled={true}
+            rotateEnabled={false}
             keepRatio={false}
             enabledAnchors={[
               "middle-left",

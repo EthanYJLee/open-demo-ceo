@@ -44,6 +44,16 @@ const PropertiesPanel = ({ element, onUpdate, onClose }) => {
     }));
   };
 
+  // 90도 회전 핸들러
+  const handleRotate = () => {
+    const currentRotation = properties.rotation || 0;
+    const newRotation = (currentRotation + 90) % 360;
+    setProperties((prev) => ({
+      ...prev,
+      rotation: newRotation,
+    }));
+  };
+
   // 속성 저장 -----------------------------------------
   const handleSave = () => {
     let updatedElement = { ...element };
@@ -74,9 +84,20 @@ const PropertiesPanel = ({ element, onUpdate, onClose }) => {
         ...element,
         x: parseInt(properties.x),
         y: parseInt(properties.y),
+        rotation: parseInt(properties.rotation),
         text: properties.text,
         fontSize: parseInt(properties.fontSize),
         fill: properties.textFill,
+      };
+    } else {
+      // 기타 요소들 (door, hallway, space 등)
+      updatedElement = {
+        ...element,
+        x: parseInt(properties.x),
+        y: parseInt(properties.y),
+        width: parseInt(properties.width),
+        height: parseInt(properties.height),
+        rotation: parseInt(properties.rotation),
       };
     }
     onUpdate(updatedElement);
@@ -148,19 +169,28 @@ const PropertiesPanel = ({ element, onUpdate, onClose }) => {
                     className="w-full px-2 py-1 text-sm border border-gray-300 rounded"
                   />
                 </div>
-                <div>
-                  <label className="block text-xs text-gray-600 mb-1">
-                    회전
-                  </label>
-                  <input
-                    type="number"
-                    value={properties.rotation}
-                    onChange={(e) => handleChange("rotation", e.target.value)}
-                    className="w-full px-2 py-1 text-sm border border-gray-300 rounded"
-                  />
-                </div>
               </>
             )}
+            {/* 모든 요소에 회전 기능 추가 */}
+            <div>
+              <label className="block text-xs text-gray-600 mb-1">회전</label>
+              <div className="flex items-center gap-2">
+                <input
+                  type="number"
+                  value={properties.rotation}
+                  onChange={(e) => handleChange("rotation", e.target.value)}
+                  className="flex-1 px-2 py-1 text-sm border border-gray-300 rounded"
+                  readOnly
+                />
+                <button
+                  onClick={handleRotate}
+                  className="px-3 py-1 text-sm bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors"
+                  title="90도 회전"
+                >
+                  ↻
+                </button>
+              </div>
+            </div>
           </div>
         </div>
         {/* 방 정보 */}

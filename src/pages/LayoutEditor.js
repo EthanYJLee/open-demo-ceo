@@ -11,6 +11,63 @@ function uuid() {
   return Math.random().toString(36).substr(2, 9);
 }
 
+// ====== 안전 클램프 유틸 (LayoutEditor.js 상단, 컴포넌트 바깥) ======
+const STAGE_WIDTH = 800;
+const STAGE_HEIGHT = 600;
+const GRID_SIZE = 20;
+
+const snapToGrid = (v) => Math.round(v / GRID_SIZE) * GRID_SIZE;
+
+// rotation을 고려한 AABB offset (Canvas.js와 동일 규칙)
+const rotationOffsets = (w, h, rotationDeg = 0) => {
+  const r = ((rotationDeg % 360) + 360) % 360;
+  if (r === 0) return { minX: 0, maxX: w, minY: 0, maxY: h };
+  if (r === 90) return { minX: -h, maxX: 0, minY: 0, maxY: w };
+  if (r === 180) return { minX: -w, maxX: 0, minY: -h, maxY: 0 };
+  if (r === 270) return { minX: 0, maxX: h, minY: -w, maxY: 0 };
+  // 비정규 각도는 보수적 근사
+  const rad = (r * Math.PI) / 180;
+  const boundW = Math.abs(w * Math.cos(rad)) + Math.abs(h * Math.sin(rad));
+  const boundH = Math.abs(w * Math.sin(rad)) + Math.abs(h * Math.cos(rad));
+  return { minX: 0, maxX: boundW, minY: 0, maxY: boundH };
+};
+
+// strokeWidth/2 + 1px 만큼 안전 여유
+const getSafeMargin = (el) => (el?.style?.strokeWidth ?? 2) / 2 + 1;
+
+// 전체 elements를 안전 클램프
+const clampAllElementsSafe = (elements = []) => {
+  return elements.map((el) => {
+    const safe = getSafeMargin(el);
+    const w = el.width ?? (el.type === "text" ? 60 : 0);
+    const h = el.height ?? (el.type === "text" ? 20 : 0);
+    const rot = el.rotation || 0;
+
+    const { minX, maxX, minY, maxY } = rotationOffsets(w, h, rot);
+
+    const minAllowedX = 0 - minX + safe;
+    const maxAllowedX = STAGE_WIDTH - maxX - safe;
+    const minAllowedY = 0 - minY + safe;
+    const maxAllowedY = STAGE_HEIGHT - maxY - safe;
+
+    return {
+      ...el,
+      x: snapToGrid(
+        Math.min(
+          Math.max(el.x, minAllowedX),
+          Math.max(minAllowedX, maxAllowedX)
+        )
+      ),
+      y: snapToGrid(
+        Math.min(
+          Math.max(el.y, minAllowedY),
+          Math.max(minAllowedY, maxAllowedY)
+        )
+      ),
+    };
+  });
+};
+
 const DEFAULT_SPACE = () => ({
   id: uuid(),
   type: "space",
@@ -28,8 +85,8 @@ const DEFAULT_ROOM = (parentId = null) => ({
   type: "room",
   x: 120,
   y: 120,
-  width: 40,
-  height: 40,
+  width: 60,
+  height: 60,
   rotation: 0,
   parent: parentId, // 포함된 공간 id
   properties: {
@@ -169,6 +226,8 @@ const LayoutEditor = () => {
       const savedLayout = await layoutService.getLayout(branchId, currentFloor);
       if (savedLayout) {
         setElements(savedLayout.elements || []);
+        const cleaned = clampAllElementsSafe(savedLayout.elements || []);
+        setElements(cleaned);
         setSelectedTemplateId(savedLayout.template_id || "");
         setHasUnsavedChanges(false);
         console.log("저장된 레이아웃을 불러왔습니다:", savedLayout);
@@ -392,10 +451,11 @@ const LayoutEditor = () => {
   const handleSave = async () => {
     setLoading(true);
     try {
+      const safeElements = clampAllElementsSafe(elements);
       const layoutData = {
         branchId,
         templateId: selectedTemplateId || "custom",
-        elements,
+        elements: safeElements,
         floor: currentFloor,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
@@ -404,6 +464,7 @@ const LayoutEditor = () => {
       const result = await layoutService.saveLayout(layoutData);
 
       if (result.success) {
+        setElements(safeElements);
         setHasUnsavedChanges(false);
         if (result.source === "local") {
           alert("레이아웃이 로컬에 저장되었습니다. (Supabase 연결 실패)");
