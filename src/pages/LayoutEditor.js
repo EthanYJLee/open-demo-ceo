@@ -6,9 +6,40 @@ import PropertiesPanel from "../components/LayoutEditor/PropertiesPanel";
 // import { layoutTemplates } from "../templates/layoutTemplates";
 import { layoutService } from "../services/layoutService";
 import "../styles/main.scss";
+import { supabase } from "../services/supabase";
 
 function uuid() {
-  return Math.random().toString(36).substr(2, 9);
+  if (
+    typeof crypto !== "undefined" &&
+    typeof crypto.randomUUID === "function"
+  ) {
+    return crypto.randomUUID();
+  }
+  // Fallback UUIDv4 generator
+  const hex = [...Array(256)].map(
+    (_, i) => (i < 16 ? "0" : "") + i.toString(16)
+  );
+  const r = () => (Math.random() * 256) | 0;
+  return (
+    hex[r()] +
+    hex[r()] +
+    hex[r()] +
+    hex[r()] +
+    "-" +
+    hex[r()] +
+    hex[r()] +
+    "-4" +
+    hex[r()].substr(1) +
+    "-" +
+    ((8 + (r() % 4)).toString(16) + hex[r()].substr(1)) +
+    "-" +
+    hex[r()] +
+    hex[r()] +
+    hex[r()] +
+    hex[r()] +
+    hex[r()] +
+    hex[r()]
+  );
 }
 
 // ====== 안전 클램프 유틸 (LayoutEditor.js 상단, 컴포넌트 바깥) ======
@@ -17,6 +48,16 @@ const STAGE_HEIGHT = 600;
 const GRID_SIZE = 20;
 
 const snapToGrid = (v) => Math.round(v / GRID_SIZE) * GRID_SIZE;
+
+// 카테고리 라벨 (저장은 영문, 표시는 한글)
+const CATEGORY_LABELS = {
+  prayer: "기도실",
+  lounge: "휴게실",
+  bathroom: "화장실",
+  storage: "창고",
+  other: "기타",
+};
+const categoryToLabel = (v) => CATEGORY_LABELS[v] || v;
 
 // rotation을 고려한 AABB offset (Canvas.js와 동일 규칙)
 const rotationOffsets = (w, h, rotationDeg = 0) => {
@@ -94,6 +135,7 @@ const DEFAULT_ROOM = (parentId = null) => ({
     roomName: "방",
     capacity: 1,
     pricePerHour: 10000,
+    category: "prayer",
   },
   style: {
     fill: "#e3f2fd",
@@ -156,6 +198,28 @@ const LayoutEditor = () => {
   const [loading, setLoading] = useState(false);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [showHelpPopup, setShowHelpPopup] = useState(false);
+  // 방 분류(그룹) 관리 상태
+  const [roomGroups, setRoomGroups] = useState([]); // [{id,name,category,capacity,pricePerHour}]
+  const [showGroupModal, setShowGroupModal] = useState(false);
+  const [editingGroup, setEditingGroup] = useState(null);
+  const [groupForm, setGroupForm] = useState({
+    name: "",
+    category: "prayer",
+    capacity: 1,
+    pricePerHour: 10000,
+  });
+  const [groupSearch, setGroupSearch] = useState("");
+  const [groupErrors, setGroupErrors] = useState({});
+  const [spacesReloadKey, setSpacesReloadKey] = useState(0);
+  const [toast, setToast] = useState({
+    visible: false,
+    message: "",
+    type: "error",
+  });
+  const showToast = (message, type = "error") => {
+    setToast({ visible: true, message, type });
+    setTimeout(() => setToast({ visible: false, message: "", type }), 2500);
+  };
 
   // 층 관리 상태
   const [currentFloor, setCurrentFloor] = useState(1);
@@ -200,6 +264,51 @@ const LayoutEditor = () => {
     return () => window.removeEventListener("beforeunload", handleBeforeUnload);
   }, [hasUnsavedChanges]);
 
+  // ===== 방 분류 로컬 저장/로드(지점별) =====
+  const loadGroupsFromSupabase = async () => {
+    try {
+      if (!branchId) return;
+      const { data, error } = await supabase
+        .from("spaces")
+        .select("id,name,category,capacity,price_per_hour")
+        .eq("branch_id", branchId)
+        .order("name", { ascending: true });
+      if (!error && Array.isArray(data)) {
+        setRoomGroups(
+          data.map((s) => ({
+            id: s.id,
+            name: s.name,
+            category: s.category || "other",
+            capacity: s.capacity ?? 0,
+            pricePerHour: s.price_per_hour ?? 0,
+          }))
+        );
+      } else if (error) {
+        console.error("loadGroupsFromSupabase error", error);
+        // fallback to localStorage
+        try {
+          const raw = localStorage.getItem(`room_groups_${branchId}`);
+          if (raw) setRoomGroups(JSON.parse(raw));
+        } catch (_) {}
+      }
+    } catch (e) {
+      console.error("loadGroupsFromSupabase unexpected", e);
+    }
+  };
+  useEffect(() => {
+    loadGroupsFromSupabase();
+  }, [branchId]);
+  useEffect(() => {
+    // 여전히 로컬 백업 유지(네트워크 문제 대비)
+    if (!branchId) return;
+    try {
+      localStorage.setItem(
+        `room_groups_${branchId}`,
+        JSON.stringify(roomGroups)
+      );
+    } catch (_) {}
+  }, [roomGroups, branchId]);
+
   // 층 목록 불러오기
   const loadFloors = async () => {
     try {
@@ -225,8 +334,20 @@ const LayoutEditor = () => {
     try {
       const savedLayout = await layoutService.getLayout(branchId, currentFloor);
       if (savedLayout) {
-        setElements(savedLayout.elements || []);
-        const cleaned = clampAllElementsSafe(savedLayout.elements || []);
+        // 로드 시 방 카테고리 기본값을 prayer로 보정
+        const normalized = (savedLayout.elements || []).map((el) =>
+          el?.type === "room"
+            ? {
+                ...el,
+                properties: {
+                  ...(el.properties || {}),
+                  category: el.properties?.category ?? "prayer",
+                },
+              }
+            : el
+        );
+        setElements(normalized);
+        const cleaned = clampAllElementsSafe(normalized);
         setElements(cleaned);
         setSelectedTemplateId(savedLayout.template_id || "");
         setHasUnsavedChanges(false);
@@ -449,6 +570,21 @@ const LayoutEditor = () => {
 
   // 저장 핸들러
   const handleSave = async () => {
+    // 모든 방이 공간에 연결되었는지 사전 검증
+    const rooms = (elements || []).filter((el) => el?.type === "room");
+    const isUuid = (s) =>
+      typeof s === "string" &&
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+        s
+      );
+    const unlinked = rooms.filter((r) => !isUuid(r?.properties?.spaceId || ""));
+    if (unlinked.length > 0) {
+      showToast(
+        `연결되지 않은 방이 ${unlinked.length}개 있습니다. 모든 방의 공간을 연결해 주세요.`,
+        "error"
+      );
+      return;
+    }
     setLoading(true);
     try {
       const safeElements = clampAllElementsSafe(elements);
@@ -472,6 +608,15 @@ const LayoutEditor = () => {
           alert("레이아웃이 저장되었습니다!");
         }
       } else {
+        if (result.error === "UNLINKED_ROOMS") {
+          showToast(
+            `연결되지 않은 방이 ${
+              result.count || 0
+            }개 있습니다. 모든 방의 공간을 연결해 주세요.`,
+            "error"
+          );
+          return;
+        }
         alert("레이아웃 저장에 실패했습니다.");
       }
     } catch (error) {
@@ -495,6 +640,129 @@ const LayoutEditor = () => {
     }
   };
 
+  // ====== 분류 저장/삭제 ↔ spaces 동기화 ======
+  const validateGroup = () => {
+    const e = {};
+    if (!groupForm.name || !groupForm.name.trim())
+      e.name = "분류명을 입력하세요";
+    if (
+      Number.isNaN(Number(groupForm.capacity)) ||
+      Number(groupForm.capacity) < 0
+    )
+      e.capacity = "0 이상의 숫자";
+    if (
+      Number.isNaN(Number(groupForm.pricePerHour)) ||
+      Number(groupForm.pricePerHour) < 0
+    )
+      e.pricePerHour = "0 이상의 숫자";
+    setGroupErrors(e);
+    return Object.keys(e).length === 0;
+  };
+
+  const refreshSpaces = async () => {
+    try {
+      const { error } = await supabase.from("spaces").select("id").limit(1);
+      if (error) console.error("spaces ping error", error);
+    } catch (e) {
+      console.error("spaces ping unexpected", e);
+    } finally {
+      setSpacesReloadKey((k) => k + 1);
+      // 그룹 목록도 최신화
+      await loadGroupsFromSupabase();
+    }
+  };
+
+  const upsertSpaceForGroup = async (group, previousName) => {
+    try {
+      if (!branchId || !group?.name) return;
+      const payload = {
+        branch_id: branchId,
+        name: group.name,
+        description: "", // ensure NOT NULL columns are satisfied
+        category: group.category,
+        capacity: group.capacity,
+        price_per_hour: group.pricePerHour,
+        is_available: true,
+      };
+      if (previousName && previousName !== group.name) {
+        const { error: err1 } = await supabase
+          .from("spaces")
+          .update(payload)
+          .eq("branch_id", branchId)
+          .eq("name", previousName);
+        if (!err1) return refreshSpaces();
+      }
+      const { error } = await supabase
+        .from("spaces")
+        .upsert(payload, { onConflict: "branch_id,name" });
+      if (error) console.error("spaces upsert error", error);
+      await refreshSpaces();
+    } catch (e) {
+      console.error("spaces upsert unexpected", e);
+    }
+  };
+
+  const deleteSpaceByGroup = async (group) => {
+    try {
+      if (!branchId || !group?.name) return;
+      const { error } = await supabase
+        .from("spaces")
+        .delete()
+        .eq("branch_id", branchId)
+        .eq("name", group.name);
+      if (error) console.error("spaces delete error", error);
+      await refreshSpaces();
+    } catch (e) {
+      console.error("spaces delete unexpected", e);
+    }
+  };
+
+  const startEditGroup = (g) => {
+    setEditingGroup(g);
+    setGroupForm({
+      name: g?.name || "",
+      category: g?.category || "prayer",
+      capacity: g?.capacity || 1,
+      pricePerHour: g?.pricePerHour || 10000,
+    });
+    setShowGroupModal(true);
+  };
+  const resetGroupForm = () => {
+    setEditingGroup(null);
+    setGroupForm({
+      name: "",
+      category: "prayer",
+      capacity: 1,
+      pricePerHour: 10000,
+    });
+    setGroupErrors({});
+  };
+  const saveGroup = async () => {
+    if (!validateGroup()) return;
+    if (editingGroup) {
+      const prevName = editingGroup.name;
+      const updated = { ...editingGroup, ...groupForm };
+      setRoomGroups((prev) =>
+        prev.map((g) => (g.id === editingGroup.id ? updated : g))
+      );
+      setEditingGroup(null);
+      await upsertSpaceForGroup(updated, prevName);
+    } else {
+      const newGroup = { id: uuid(), ...groupForm };
+      setRoomGroups((prev) => [...prev, newGroup]);
+      await upsertSpaceForGroup(newGroup);
+    }
+    resetGroupForm();
+    await loadGroupsFromSupabase();
+  };
+  const deleteGroup = async (groupId) => {
+    const target = roomGroups.find((g) => g.id === groupId);
+    setRoomGroups((prev) => prev.filter((g) => g.id !== groupId));
+    if (editingGroup?.id === groupId) resetGroupForm();
+    await deleteSpaceByGroup(target);
+    await loadGroupsFromSupabase();
+  };
+
   const selectedElements = elements.filter((el) => selectedIds.includes(el.id));
 
   if (loading) {
@@ -507,6 +775,27 @@ const LayoutEditor = () => {
 
   return (
     <div className="layout-editor">
+      {toast.visible && (
+        <div
+          style={{
+            position: "fixed",
+            top: 16,
+            right: 16,
+            zIndex: 9999,
+            background: toast.type === "error" ? "#fee2e2" : "#ecfeff",
+            color: "#111827",
+            border: `1px solid ${
+              toast.type === "error" ? "#ef4444" : "#06b6d4"
+            }`,
+            padding: "10px 14px",
+            borderRadius: 8,
+            boxShadow: "0 4px 14px rgba(0,0,0,0.08)",
+            maxWidth: 360,
+          }}
+        >
+          {toast.message}
+        </div>
+      )}
       {/* 헤더 */}
       <div className="layout-editor__header">
         <div className="layout-editor__header-content">
@@ -563,6 +852,20 @@ const LayoutEditor = () => {
                     clipRule="evenodd"
                   />
                 </svg>
+              </button>
+              <button
+                onClick={() => setShowGroupModal(true)}
+                title="방 분류 배치"
+                style={{
+                  marginLeft: 6,
+                  padding: "6px 10px",
+                  borderRadius: 6,
+                  border: "1px solid #cbd5e1",
+                  background: "white",
+                  whiteSpace: "nowrap",
+                }}
+              >
+                분류 배치
               </button>
             </div>
 
@@ -624,6 +927,7 @@ const LayoutEditor = () => {
         <div className="layout-editor__properties">
           {showProperties && selectedElements.length === 1 ? (
             <PropertiesPanel
+              key={spacesReloadKey}
               element={selectedElements[0]}
               onUpdate={handleElementUpdate}
               onClose={() => setShowProperties(false)}
@@ -631,6 +935,280 @@ const LayoutEditor = () => {
           ) : null}
         </div>
       </div>
+
+      {/* 방 분류 배치 모달 */}
+      {showGroupModal && (
+        <div className="layout-editor__modal">
+          <div
+            className="layout-editor__modal-content"
+            style={{ maxWidth: 980 }}
+          >
+            <div className="layout-editor__modal-header">
+              <h2 className="layout-editor__modal-header-title">
+                방 분류 배치
+              </h2>
+              <button
+                onClick={() => {
+                  setShowGroupModal(false);
+                  resetGroupForm();
+                }}
+                className="layout-editor__modal-header-close"
+                title="닫기"
+              >
+                <svg fill="currentColor" viewBox="0 0 20 20">
+                  <path
+                    fillRule="evenodd"
+                    d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
+                    clipRule="evenodd"
+                  />
+                </svg>
+              </button>
+            </div>
+            <div className="layout-editor__modal-body">
+              <div
+                style={{
+                  display: "flex",
+                  gap: 16,
+                  flexWrap: "wrap",
+                  alignItems: "flex-start",
+                }}
+              >
+                {/* 목록 */}
+                <div style={{ flex: 1, minWidth: 380 }}>
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      marginBottom: 8,
+                    }}
+                  >
+                    <h3
+                      className="layout-editor__modal-section-title"
+                      style={{ margin: 0 }}
+                    >
+                      분류 목록
+                    </h3>
+                    <input
+                      type="text"
+                      placeholder="분류 검색"
+                      value={groupSearch}
+                      onChange={(e) => setGroupSearch(e.target.value)}
+                      className="layout-editor__modal-floor-edit-input"
+                      style={{ maxWidth: 240 }}
+                    />
+                  </div>
+                  <div
+                    style={{
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: 10,
+                    }}
+                  >
+                    {roomGroups
+                      .filter((g) =>
+                        g.name.toLowerCase().includes(groupSearch.toLowerCase())
+                      )
+                      .map((g) => (
+                        <div
+                          key={g.id}
+                          style={{
+                            border: "1px solid #e2e8f0",
+                            borderRadius: 12,
+                            padding: 12,
+                            display: "grid",
+                            gridTemplateColumns: "1fr auto auto",
+                            gap: 12,
+                            alignItems: "center",
+                            background: "#fff",
+                          }}
+                        >
+                          <div
+                            style={{
+                              display: "flex",
+                              alignItems: "center",
+                              gap: 8,
+                              minWidth: 200,
+                            }}
+                          >
+                            <span
+                              style={{
+                                width: 10,
+                                height: 10,
+                                background: "#2563eb",
+                                borderRadius: 999,
+                              }}
+                            ></span>
+                            <strong
+                              style={{
+                                overflow: "hidden",
+                                textOverflow: "ellipsis",
+                              }}
+                            >
+                              {g.name}
+                            </strong>
+                            <span style={{ color: "#64748b", fontSize: 12 }}>
+                              · {categoryToLabel(g.category)}
+                            </span>
+                          </div>
+                          <span style={{ color: "#334155", minWidth: 170 }}>
+                            {g.capacity}명 ·{" "}
+                            {Number(g.pricePerHour || 0).toLocaleString()}
+                            원/시간
+                          </span>
+                          <div style={{ display: "flex", gap: 6 }}>
+                            <button
+                              onClick={() => startEditGroup(g)}
+                              title="편집"
+                            >
+                              ✏️
+                            </button>
+                            <button
+                              onClick={() => deleteGroup(g.id)}
+                              title="삭제"
+                            >
+                              🗑️
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    {roomGroups.length === 0 && (
+                      <div style={{ color: "#64748b", fontSize: 13 }}>
+                        아직 분류가 없습니다. 우측에서 분류를 추가하세요.
+                      </div>
+                    )}
+                  </div>
+                </div>
+                {/* 구분선 */}
+                <div
+                  style={{
+                    width: 1,
+                    alignSelf: "stretch",
+                    background: "#e2e8f0",
+                  }}
+                />
+                {/* 새 분류 추가 */}
+                <div style={{ flex: 1, minWidth: 320 }}>
+                  <h3
+                    className="layout-editor__modal-section-title"
+                    style={{ marginTop: 2 }}
+                  >
+                    {editingGroup ? "분류 편집" : "새 분류 추가"}
+                  </h3>
+                  <div
+                    style={{
+                      display: "grid",
+                      gridTemplateColumns: "100px 1fr",
+                      rowGap: 10,
+                      columnGap: 10,
+                      alignItems: "center",
+                    }}
+                  >
+                    <label>분류명</label>
+                    <input
+                      type="text"
+                      value={groupForm.name}
+                      onChange={(e) =>
+                        setGroupForm({ ...groupForm, name: e.target.value })
+                      }
+                      placeholder="예: 1인 기도실"
+                      className="layout-editor__modal-floor-edit-input"
+                      style={{ minWidth: 220 }}
+                    />
+                    {groupErrors.name ? (
+                      <span
+                        style={{
+                          gridColumn: "2 / 3",
+                          color: "#ef4444",
+                          fontSize: 12,
+                        }}
+                      >
+                        {groupErrors.name}
+                      </span>
+                    ) : null}
+                    <label>카테고리</label>
+                    <select
+                      value={groupForm.category}
+                      onChange={(e) =>
+                        setGroupForm({ ...groupForm, category: e.target.value })
+                      }
+                    >
+                      <option value="prayer">기도실</option>
+                      <option value="lounge">휴게실</option>
+                      <option value="bathroom">화장실</option>
+                      <option value="storage">창고</option>
+                      <option value="other">기타</option>
+                    </select>
+                    <label>정원</label>
+                    <input
+                      type="number"
+                      value={groupForm.capacity}
+                      onChange={(e) =>
+                        setGroupForm({
+                          ...groupForm,
+                          capacity: parseInt(e.target.value || 0),
+                        })
+                      }
+                      placeholder="0"
+                      style={{ minWidth: 120 }}
+                    />
+                    {groupErrors.capacity ? (
+                      <span
+                        style={{
+                          gridColumn: "2 / 3",
+                          color: "#ef4444",
+                          fontSize: 12,
+                        }}
+                      >
+                        {groupErrors.capacity}
+                      </span>
+                    ) : null}
+                    <label>요금(원/시간)</label>
+                    <input
+                      type="number"
+                      value={groupForm.pricePerHour}
+                      onChange={(e) =>
+                        setGroupForm({
+                          ...groupForm,
+                          pricePerHour: parseInt(e.target.value || 0),
+                        })
+                      }
+                      placeholder="0"
+                      style={{ minWidth: 140 }}
+                    />
+                    {groupErrors.pricePerHour ? (
+                      <span
+                        style={{
+                          gridColumn: "2 / 3",
+                          color: "#ef4444",
+                          fontSize: 12,
+                        }}
+                      >
+                        {groupErrors.pricePerHour}
+                      </span>
+                    ) : null}
+                    <div></div>
+                    <button
+                      onClick={saveGroup}
+                      className="layout-editor__modal-add-button"
+                      style={{ minWidth: 280 }}
+                    >
+                      {editingGroup ? "저장" : "추가"}
+                    </button>
+                    <div></div>
+                    <button
+                      onClick={resetGroupForm}
+                      className="layout-editor__modal-floor-edit-cancel"
+                    >
+                      초기화
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* 층 관리 모달 */}
       {showFloorModal && (

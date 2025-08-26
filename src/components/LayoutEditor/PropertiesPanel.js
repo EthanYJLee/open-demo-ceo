@@ -1,7 +1,13 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
+import { useParams } from "react-router-dom";
+import { supabase } from "../../services/supabase";
 
 const PropertiesPanel = ({ element, onUpdate, onClose }) => {
   const [properties, setProperties] = useState({});
+  const updateTimerRef = useRef(null);
+  const skipNextUpdateRef = useRef(false);
+  const { branchId } = useParams();
+  const [spaces, setSpaces] = useState([]); // [{id, name}]
 
   // 방 유형 옵션
   const roomTypes = [
@@ -25,6 +31,16 @@ const PropertiesPanel = ({ element, onUpdate, onClose }) => {
         roomType: element.properties?.roomType || "prayer",
         capacity: element.properties?.capacity || 4,
         pricePerHour: element.properties?.pricePerHour || 20000,
+        spaceId: element.properties?.spaceId || "",
+        isAvailable: element.properties?.isAvailable ?? true,
+        category:
+          element.properties?.category &&
+          element.properties?.category !== "room"
+            ? element.properties?.category
+            : "prayer",
+        amenities: element.properties?.amenities || "",
+        images: element.properties?.images || "",
+        operatingHours: element.properties?.operatingHours || "",
         fill: element.style?.fill || "#e3f2fd",
         stroke: element.style?.stroke || "#1976d2",
         strokeWidth: element.style?.strokeWidth || 2,
@@ -32,8 +48,34 @@ const PropertiesPanel = ({ element, onUpdate, onClose }) => {
         fontSize: element.fontSize || 18,
         textFill: element.fill || "#333",
       });
+      // 초기 로딩으로 인한 업데이트는 스킵
+      skipNextUpdateRef.current = true;
     }
   }, [element]);
+
+  // 연결 가능한 공간 목록 로드 (있으면 드롭다운 제공, 실패하면 무시)
+  useEffect(() => {
+    let ignore = false;
+    const loadSpaces = async () => {
+      try {
+        if (!branchId) return;
+        const { data, error } = await supabase
+          .from("spaces")
+          .select("id,name")
+          .eq("branch_id", branchId)
+          .order("name", { ascending: true });
+        if (!ignore && !error && Array.isArray(data)) {
+          setSpaces(data);
+        }
+      } catch (_) {
+        // ignore; fallback to manual input
+      }
+    };
+    loadSpaces();
+    return () => {
+      ignore = true;
+    };
+  }, [branchId]);
 
   const handleChange = (field, value) => {
     console.log(field);
@@ -46,6 +88,7 @@ const PropertiesPanel = ({ element, onUpdate, onClose }) => {
 
   // 90도 회전 핸들러
   const handleRotate = () => {
+    if (element?.type === "room") return; // 방 요소는 회전 금지
     const currentRotation = properties.rotation || 0;
     const newRotation = (currentRotation + 90) % 360;
     setProperties((prev) => ({
@@ -54,55 +97,73 @@ const PropertiesPanel = ({ element, onUpdate, onClose }) => {
     }));
   };
 
-  // 속성 저장 -----------------------------------------
-  const handleSave = () => {
-    let updatedElement = { ...element };
-    if (element.type === "room") {
-      updatedElement = {
-        ...element,
-        x: parseInt(properties.x),
-        y: parseInt(properties.y),
-        width: parseInt(properties.width),
-        height: parseInt(properties.height),
-        rotation: parseInt(properties.rotation),
-        properties: {
-          ...element.properties,
-          roomNumber: properties.roomNumber,
-          roomName: properties.roomName,
-          roomType: properties.roomType,
-          capacity: parseInt(properties.capacity),
-          pricePerHour: parseInt(properties.pricePerHour),
-        },
-        style: {
-          fill: properties.fill,
-          stroke: properties.stroke,
-          strokeWidth: parseInt(properties.strokeWidth),
-        },
-      };
-    } else if (element.type === "text") {
-      updatedElement = {
-        ...element,
-        x: parseInt(properties.x),
-        y: parseInt(properties.y),
-        rotation: parseInt(properties.rotation),
-        text: properties.text,
-        fontSize: parseInt(properties.fontSize),
-        fill: properties.textFill,
-      };
-    } else {
-      // 기타 요소들 (door, hallway, space 등)
-      updatedElement = {
-        ...element,
-        x: parseInt(properties.x),
-        y: parseInt(properties.y),
-        width: parseInt(properties.width),
-        height: parseInt(properties.height),
-        rotation: parseInt(properties.rotation),
-      };
+  // 속성 자동 적용 (디바운스)
+  useEffect(() => {
+    if (!element) return;
+    if (skipNextUpdateRef.current) {
+      skipNextUpdateRef.current = false;
+      return;
     }
-    onUpdate(updatedElement);
-  };
-  // ----------------------------------------- 속성 저장
+
+    if (updateTimerRef.current) clearTimeout(updateTimerRef.current);
+    updateTimerRef.current = setTimeout(() => {
+      let updatedElement = { ...element };
+      if (element.type === "room") {
+        updatedElement = {
+          ...element,
+          x: parseInt(properties.x),
+          y: parseInt(properties.y),
+          width: parseInt(properties.width),
+          height: parseInt(properties.height),
+          rotation: 0, // 방 요소는 회전 미지원
+          properties: {
+            ...element.properties,
+            roomNumber: properties.roomNumber,
+            roomName: properties.roomName,
+            roomType: properties.roomType,
+            spaceId: properties.spaceId || "",
+            capacity: parseInt(properties.capacity),
+            pricePerHour: parseInt(properties.pricePerHour),
+            isAvailable: !!properties.isAvailable,
+            category: properties.category,
+            amenities: properties.amenities,
+            images: properties.images,
+            operatingHours: properties.operatingHours,
+          },
+          style: {
+            fill: properties.fill,
+            stroke: properties.stroke,
+            strokeWidth: parseInt(properties.strokeWidth),
+          },
+        };
+      } else if (element.type === "text") {
+        updatedElement = {
+          ...element,
+          x: parseInt(properties.x),
+          y: parseInt(properties.y),
+          rotation: parseInt(properties.rotation),
+          text: properties.text,
+          fontSize: parseInt(properties.fontSize),
+          fill: properties.textFill,
+        };
+      } else {
+        // 기타 요소들 (door, hallway, space 등)
+        updatedElement = {
+          ...element,
+          x: parseInt(properties.x),
+          y: parseInt(properties.y),
+          width: parseInt(properties.width),
+          height: parseInt(properties.height),
+          rotation: parseInt(properties.rotation),
+        };
+      }
+      onUpdate(updatedElement);
+    }, 300); // 300ms 디바운스
+
+    return () => {
+      if (updateTimerRef.current) clearTimeout(updateTimerRef.current);
+    };
+  }, [properties, element, onUpdate]);
 
   if (!element) return null;
 
@@ -171,26 +232,28 @@ const PropertiesPanel = ({ element, onUpdate, onClose }) => {
                 </div>
               </>
             )}
-            {/* 모든 요소에 회전 기능 추가 */}
-            <div>
-              <label className="block text-xs text-gray-600 mb-1">회전</label>
-              <div className="flex items-center gap-2">
-                <input
-                  type="number"
-                  value={properties.rotation}
-                  onChange={(e) => handleChange("rotation", e.target.value)}
-                  className="flex-1 px-2 py-1 text-sm border border-gray-300 rounded"
-                  readOnly
-                />
-                <button
-                  onClick={handleRotate}
-                  className="px-3 py-1 text-sm bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors"
-                  title="90도 회전"
-                >
-                  ↻
-                </button>
+            {/* 회전: 방(room) 제외 요소에만 표시 */}
+            {element.type !== "room" && (
+              <div>
+                <label className="block text-xs text-gray-600 mb-1">회전</label>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="number"
+                    value={properties.rotation}
+                    onChange={(e) => handleChange("rotation", e.target.value)}
+                    className="flex-1 px-2 py-1 text-sm border border-gray-300 rounded"
+                    readOnly
+                  />
+                  <button
+                    onClick={handleRotate}
+                    className="px-3 py-1 text-sm bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors"
+                    title="90도 회전"
+                  >
+                    ↻
+                  </button>
+                </div>
               </div>
-            </div>
+            )}
           </div>
         </div>
         {/* 방 정보 */}
@@ -222,19 +285,101 @@ const PropertiesPanel = ({ element, onUpdate, onClose }) => {
               </div>
               <div>
                 <label className="block text-xs text-gray-600 mb-1">
-                  방 유형
+                  공간 연결
+                </label>
+                {spaces && spaces.length > 0 ? (
+                  <select
+                    value={properties.spaceId}
+                    onChange={(e) => handleChange("spaceId", e.target.value)}
+                    className="w-full px-2 py-1 text-sm border border-gray-300 rounded"
+                  >
+                    <option value="">선택 없음</option>
+                    {spaces.map((s) => (
+                      <option key={s.id} value={s.id}>
+                        {s.name || s.id}
+                      </option>
+                    ))}
+                  </select>
+                ) : (
+                  <input
+                    type="text"
+                    placeholder="spaceId (직접 입력)"
+                    value={properties.spaceId}
+                    onChange={(e) => handleChange("spaceId", e.target.value)}
+                    className="w-full px-2 py-1 text-sm border border-gray-300 rounded"
+                  />
+                )}
+              </div>
+              {/* 공간 연결/상태/카테고리 */}
+              <div>
+                <label className="block text-xs text-gray-600 mb-1">
+                  가용 여부
+                </label>
+                <label className="inline-flex items-center gap-2 text-sm">
+                  <input
+                    type="checkbox"
+                    checked={!!properties.isAvailable}
+                    onChange={(e) =>
+                      handleChange("isAvailable", e.target.checked)
+                    }
+                  />
+                  예약 가능
+                </label>
+              </div>
+              <div>
+                <label className="block text-xs text-gray-600 mb-1">
+                  카테고리
                 </label>
                 <select
-                  value={properties.roomType}
-                  onChange={(e) => handleChange("roomType", e.target.value)}
+                  value={properties.category}
+                  onChange={(e) => handleChange("category", e.target.value)}
                   className="w-full px-2 py-1 text-sm border border-gray-300 rounded"
                 >
-                  {roomTypes.map((type) => (
-                    <option key={type.value} value={type.value}>
-                      {type.label}
-                    </option>
-                  ))}
+                  <option value="prayer">기도실</option>
+                  <option value="lounge">휴게실</option>
+                  <option value="bathroom">화장실</option>
+                  <option value="storage">창고</option>
+                  <option value="other">기타</option>
                 </select>
+              </div>
+              {/* 편의시설/이미지/운영시간 */}
+              <div>
+                <label className="block text-xs text-gray-600 mb-1">
+                  편의시설 (쉼표로 구분)
+                </label>
+                <input
+                  type="text"
+                  placeholder="WiFi, Projector, Whiteboard"
+                  value={properties.amenities}
+                  onChange={(e) => handleChange("amenities", e.target.value)}
+                  className="w-full px-2 py-1 text-sm border border-gray-300 rounded"
+                />
+              </div>
+              <div>
+                <label className="block text-xs text-gray-600 mb-1">
+                  이미지 URL들 (쉼표로 구분)
+                </label>
+                <input
+                  type="text"
+                  placeholder="https://.../img1.jpg, https://.../img2.jpg"
+                  value={properties.images}
+                  onChange={(e) => handleChange("images", e.target.value)}
+                  className="w-full px-2 py-1 text-sm border border-gray-300 rounded"
+                />
+              </div>
+              <div>
+                <label className="block text-xs text-gray-600 mb-1">
+                  운영 시간
+                </label>
+                <input
+                  type="text"
+                  placeholder="예: 09:00-18:00 (혹은 JSON)"
+                  value={properties.operatingHours}
+                  onChange={(e) =>
+                    handleChange("operatingHours", e.target.value)
+                  }
+                  className="w-full px-2 py-1 text-sm border border-gray-300 rounded"
+                />
               </div>
               {/* 기도실일 때만 수용인원과 시간당 가격 표시 */}
               {properties.roomType === "prayer" && (
@@ -355,14 +500,7 @@ const PropertiesPanel = ({ element, onUpdate, onClose }) => {
           </div>
         )}
       </div>
-      <div className="p-4 border-t">
-        <button
-          onClick={handleSave}
-          className="w-full bg-primary-500 hover:bg-primary-600 text-white py-2 px-4 rounded-md font-medium"
-        >
-          저장
-        </button>
-      </div>
+      {/* 저장 버튼 제거: 입력 변경 시 자동 적용 */}
     </div>
   );
 };

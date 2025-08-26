@@ -94,10 +94,86 @@ export const layoutService = {
         }
       }
 
+      // ───────────────────────────────────────────────
+      // 0) 방 요소 id를 UUID로 정규화 (room_placements.id가 UUID 컬럼이므로 필수)
+      const isUuid = (s) =>
+        typeof s === "string" &&
+        /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+          s
+        );
+      const uuidv4 = () => {
+        try {
+          // 브라우저 환경
+          if (
+            typeof crypto !== "undefined" &&
+            typeof crypto.randomUUID === "function"
+          ) {
+            return crypto.randomUUID();
+          }
+        } catch (_) {}
+        // 폴백
+        return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(
+          /[xy]/g,
+          function (c) {
+            const r = (Math.random() * 16) | 0;
+            const v = c === "x" ? r : (r & 0x3) | 0x8;
+            return v.toString(16);
+          }
+        );
+      };
+
+      const originalElements = layoutData.elements || [];
+      const idMap = {};
+      const sanitizedElements = originalElements.map((el) => {
+        if (el?.type === "room" && !isUuid(el?.id)) {
+          const newid = uuidv4();
+          idMap[el.id] = newid;
+          return { ...el, id: newid };
+        }
+        return el;
+      });
+      if (Object.keys(idMap).length > 0) {
+        console.log("방 ID UUID 정규화 매핑:", idMap);
+      }
+
+      const sanitizedLayoutData = {
+        ...layoutData,
+        elements: sanitizedElements,
+      };
+      // ───────────────────────────────────────────────
+
+      // 서비스 레벨 가드: 공간 미연결 방이 있으면 저장 중단
+      try {
+        const roomsForValidation = (sanitizedElements || []).filter(
+          (el) => el?.type === "room"
+        );
+        const isUuid = (s) =>
+          typeof s === "string" &&
+          /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+            s
+          );
+        const unlinkedRooms = roomsForValidation.filter((r) => {
+          const sid = r?.properties?.spaceId;
+          if (!sid || typeof sid !== "string") return true;
+          if (sid.trim() === "" || sid.trim() === "선택 없음") return true;
+          return !isUuid(sid);
+        });
+        if (unlinkedRooms.length > 0) {
+          return {
+            success: false,
+            error: "UNLINKED_ROOMS",
+            count: unlinkedRooms.length,
+          };
+        }
+      } catch (e) {
+        // validation 에서 예외 발생 시에도 저장 중단
+        return { success: false, error: "VALIDATION_FAILED" };
+      }
+
       // 먼저 로컬 스토리지에 백업 저장
       localStorage.setItem(
         `layout_${actualBranchId}_${layoutData.floor || 1}`,
-        JSON.stringify({ ...layoutData, branchId: actualBranchId })
+        JSON.stringify({ ...sanitizedLayoutData, branchId: actualBranchId })
       );
       console.log("로컬 스토리지 백업 완료");
 
@@ -128,7 +204,7 @@ export const layoutService = {
             name: layoutData.templateId || `${floor}층`,
             description: `레이아웃 에디터로 생성된 ${floor}층 레이아웃`,
             layout_data: {
-              elements: layoutData.elements || [],
+              elements: sanitizedElements || [],
               templateId: layoutData.templateId,
               floor: floor,
               createdAt: layoutData.createdAt,
@@ -162,7 +238,7 @@ export const layoutService = {
             name: layoutData.templateId || `${floor}층`,
             description: `레이아웃 에디터로 생성된 ${floor}층 레이아웃`,
             layout_data: {
-              elements: layoutData.elements || [],
+              elements: sanitizedElements || [],
               templateId: layoutData.templateId,
               floor: floor,
               createdAt: layoutData.createdAt,
@@ -186,6 +262,110 @@ export const layoutService = {
         }
         result = data;
       }
+
+      // ───────────────────────────────────────────────
+      // room_placements 자동 동기화
+      try {
+        let layoutId = result?.id;
+        if (!layoutId) {
+          const { data: fetchedLayout, error: fetchLayoutIdErr } =
+            await supabase
+              .from("space_layouts")
+              .select("id")
+              .eq("branch_id", actualBranchId)
+              .eq("floor", floor)
+              .single();
+          if (fetchLayoutIdErr) {
+            console.warn("layout_id 재조회 실패:", fetchLayoutIdErr);
+          } else {
+            layoutId = fetchedLayout?.id;
+          }
+        }
+        if (!layoutId) {
+          console.warn("room_placements 동기화 건너뜀: layout_id 없음");
+        }
+        const rooms = (sanitizedElements || []).filter(
+          (el) => el?.type === "room"
+        );
+
+        // 현재 레이아웃의 기존 room_placements 조회
+        const { data: existingPlacements, error: fetchRpErr } = await supabase
+          .from("room_placements")
+          .select("id")
+          .eq("layout_id", layoutId);
+        if (fetchRpErr) {
+          console.warn("room_placements 조회 오류(무시):", fetchRpErr);
+        }
+
+        const existingIds = new Set(
+          (existingPlacements || []).map((r) => r.id)
+        );
+        const nowIso = new Date().toISOString();
+
+        // 1) 공간(spaces) 자동 생성/갱신 및 매핑 확보
+        const roomIdToSpaceId = {};
+        await Promise.all(
+          rooms.map(async (r) => {
+            try {
+              const sid = r?.properties?.spaceId;
+              if (
+                typeof sid === "string" &&
+                /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+                  sid
+                )
+              ) {
+                roomIdToSpaceId[r.id] = sid;
+              }
+            } catch (e) {
+              console.warn("spaceId 매핑 스킵:", e);
+            }
+          })
+        );
+
+        const upsertPayload = rooms.map((r) => ({
+          id: r.id, // 요소 id를 키로 사용 (UUID 보장)
+          layout_id: layoutId,
+          space_id: roomIdToSpaceId[r.id] || null,
+          x_position: Math.round(r.x || 0),
+          y_position: Math.round(r.y || 0),
+          width: Math.round(r.width || 0),
+          height: Math.round(r.height || 0),
+          rotation: Math.round(r.rotation || 0),
+          room_name: r.properties?.roomName || null,
+          room_number: r.properties?.roomNumber || null,
+          updated_at: nowIso,
+          created_at: nowIso,
+        }));
+
+        console.log("room_placements upsert payload:", upsertPayload);
+
+        if (upsertPayload.length > 0) {
+          const { data: upserted, error: upsertErr } = await supabase
+            .from("room_placements")
+            .upsert(upsertPayload, { onConflict: "id" })
+            .select();
+          if (upsertErr) {
+            console.warn("room_placements upsert 오류(무시):", upsertErr);
+          } else {
+            console.log("room_placements upsert 완료:", upserted);
+          }
+        }
+
+        // 삭제된 방 정리: 기존에 있었지만 현재 elements에 없는 id 제거
+        const currentIds = new Set(rooms.map((r) => r.id));
+        const toDelete = [...existingIds].filter((id) => !currentIds.has(id));
+        if (toDelete.length > 0) {
+          const { error: delErr } = await supabase
+            .from("room_placements")
+            .delete()
+            .in("id", toDelete);
+          if (delErr) console.warn("room_placements 삭제 오류(무시):", delErr);
+          else console.log("room_placements 삭제 완료:", toDelete);
+        }
+      } catch (rpError) {
+        console.warn("room_placements 동기화 실패(저장은 계속 진행):", rpError);
+      }
+      // ───────────────────────────────────────────────
 
       console.log("Supabase 저장 성공:", result);
       return {
